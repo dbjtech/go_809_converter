@@ -1,0 +1,79 @@
+{
+    "lbmp": {
+        "lbmp_url": "http://qiji-app1:3000/ge",
+        "address_url": "http://qiji-app1:3000/gv"
+    },
+    "eventer": {
+        "thread_num": 3,
+        "resp_q_size": 10000,
+        "json_formatable": false
+    },
+    "uweb": {
+        "url_out": "http://www.qijigps.com",
+        "url_in": "http://app-01:8000",
+        "domain": "www.qijigps.com",
+        "test_cid": "13011292217",
+        "test_uid": "18310505991",
+        "test_tid": "T123SIMULATOR",
+        "test_sim": "130111292217"
+    },
+    "gateway": {
+        "domain": "gateway.qijigps.com:44444"
+    },
+    "admin": {
+        "url": "http://admin.qijigps.com"
+    },
+    "sms": {
+        "sms_url": "http://10.251.148.48:4000/sms/mt"
+    },
+    "redis": {
+        "host": "34b4be06de0844bb.m.cnqda.kvstore.aliyuncs.com",
+        "port": 6379,
+        "password": "34b4be06de0844bb:Redis2aly"
+    },
+    "mysql": {
+        "host": "rds25l291952t4891u00.mysql.rds.aliyuncs.com",
+        "database": "qjcg",
+        "user": "qjcg",
+        "password": "mysqlqiji"
+    },
+    "celery": {
+        "host": "celery-server",
+        "port": "5672",
+        "user": "celery",
+        "password": "celery",
+        "vhost": "celeryhost"
+    },
+    "cell": {
+        "cell_url": "http://cell-server:9780/base/station/location",
+        "wifi_url": "http://cell-server:9780/wifi/location"
+    },
+    "email": {
+        "email_url": "http://common-server:2000/email",
+        "server": "smtp.163.com",
+        "user": "ichebaopabb@163.com",
+        "password": "pabb123",
+        "efrom": "QJCG",
+        "subject": "QJCG"
+    },
+    "push": {
+        "push_url": "http://push-server:9779/push/packet",
+        "register_url": "http://push-server:9779/push/register",
+        "wechat_push_url": "http://apps.dbjtech.com/push"
+    },
+    "thirdparty": {
+        "thread_num": 5,
+        "most_try": 3,
+        "host": "222.186.130.167",
+        "port": 1300,
+        "yh_cids": [
+            "7eefc127206746518001dc5a8d35efe2|我的集团1",
+            "9ce3f68ebad347fd84139d8243d163e6|南京测试中心",
+            "28dbd21527054f41999c98f7ce601539|一嗨租车"
+        ],
+        "yh_cid": "28dbd21527054f41999c98f7ce601539"
+    },
+    "special": {
+        "shouqi_cid": "dd4ae4a420094d4bb43371d1fb7cd5ea"
+    }
+}

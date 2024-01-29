@@ -1,0 +1,23 @@
+{
+  "ENV": "develop",
+  "CONFIG_CENTER": {
+    "host": "mysql-server",
+    "port": 13306,
+    "password": "pabb",
+    "user": "pabb",
+    "database": "qjcg"
+  },
+  "GW": {
+    "rpc_queue_name": "req:queue",
+    "res_queue_name": "resp:queue"
+  },
+  "LOG2INFLUX": true,
+  "INFLUXDB": {
+    "host": "localhost",
+    "port": 8080,
+    "password": "root",
+    "username": "root",
+    "database": "",
+    "retries": 3
+  }
+}

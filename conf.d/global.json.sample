@@ -1,0 +1,51 @@
+{
+  "ENV": "develop",
+  "CONFIG_CENTER": {
+    "host": "mysql-server",
+    "port": 13306,
+    "password": "pabb",
+    "user": "pabb",
+    "database": "qjcg"
+  },
+  "GW": {
+    "res_queue_name": "mqtt-broker:gateway",
+    "rpc_queue_name": "mqtt-broker:eventer"
+  },
+  "LOG2INFLUX": false,
+  "INFLUXDB": {
+    "host": "mysql-server",
+    "port": 8086,
+    "password": "root",
+    "username": "root",
+    "database": "hello",
+    "retries": 3
+  },
+  "UPLINK": {
+    "userId": "admin",
+    "transferInterval": "15000",
+    "govServerIp": "192.168.3.28",
+    "govServerPort": 11229,
+    "localServerIp": "192.168.3.28",
+    "localServerPort": 11225,
+    "platformUserId": 8992,
+    "platformPassword": 12345678,
+    "platformId": 8992,
+    "platformNo": 82633,
+    "producerId": 14568352101,
+    "licenseno": 10000,
+    "m1": 10000000,
+    "a1": 20000000,
+    "c1": 30000000,
+    "encryptKey": 223344,
+    "protocol_version": "1.0.0",
+    "useWhiteList": false, // 只发送白名单里面的车
+    "useLocationInterval": false, // 一分钟只发送一个位置
+    "extendVersion": false, // 是否使用809扩展版的协议
+    "usePrimeType": true, // 报文头使用主报文号
+    "cryptoPacket":[] // 报文体需要被加密的报文号, 子业务类型数组，没有子业务的填写主业务类型
+  },
+  "DEPART": {
+    "host": "localhost",
+    "port": 11233
+  }
+}

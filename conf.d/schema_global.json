@@ -1,0 +1,234 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "QJCG config schema",
+    "description": "QJCG config schema validator describe file.",
+    "type": "object",
+    "properties": {
+        "eventer": {
+            "description": "qjcg eventer config",
+            "type": "object",
+            "properties": {
+                "thread_num": {
+                    "description": "eventer thread num",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                },
+                "resp_q_size": {
+                    "description": "response queue max size",
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 50000,
+                    "default": 10000
+                },
+                "json_formatable": {
+                    "description": "json data formatable switch",
+                    "type": "boolean",
+                    "default": false
+                }
+            },
+            "required": ["thread_num", "json_formatable"]
+        },
+        "gateway": {
+            "description": "qjcg gateway config",
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "description": "used for terminal domain",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "host": {
+                    "description": "redis push hots url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "port": {
+                    "description": "redis push port",
+                    "type": "integer",
+                    "minimum": 1025,
+                    "maximum": 65535
+                },
+                "password": {
+                    "description": "redis push password",
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"}
+                    ]
+                },
+                "db": {
+                    "description": "Push redis business db",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "default": 2
+                }
+            },
+            "required": ["domain","host","db"]
+        },
+        "redis": {
+            "description": "qjcg redis config",
+            "type": "object",
+            "properties": {
+                "host": {
+                    "description": "redis hots url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "port": {
+                    "description": "redis port",
+                    "type": "integer",
+                    "minimum": 1025,
+                    "maximum": 65535
+                },
+                "password": {
+                    "description": "redis password",
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"}
+                    ]
+                }
+            },
+            "required": ["host", "port", "password"]
+        },
+        "mysql": {
+            "description": "qjcg mysql config",
+            "type": "object",
+            "properties": {
+                "host": {
+                    "description": "mysql hots url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "database": {
+                    "description": "mysql database",
+                    "type": "string"
+                },
+                "user": {
+                    "description": "mysql username",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "mysql password",
+                    "type": "string"
+                }
+            },
+            "required": ["host", "database", "user", "password"]
+        },
+        "cell": {
+            "description": "qjcg cell config",
+            "type": "object",
+            "properties": {
+                "cell_url": {
+                    "description": "cell url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "wifi_url": {
+                    "description": "wifi url",
+                    "type": "string",
+                    "format": "uri"
+                }
+            },
+            "required": ["cell_url", "wifi_url"]
+        },
+        "push": {
+            "description": "qjcg wspush config",
+            "type": "object",
+            "properties": {
+                "push_url": {
+                    "description": "push server url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "register_url": {
+                    "description": "push register url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "wechat_push_url": {
+                    "description": "push wechat url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "host": {
+                    "description": "redis push hots url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "port": {
+                    "description": "redis push port",
+                    "type": "integer",
+                    "minimum": 1025,
+                    "maximum": 65535
+                },
+                "password": {
+                    "description": "redis push password",
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"}
+                    ]
+                },
+                "db": {
+                    "description": "Push redis business db",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "default": 2
+                }
+            },
+            "required": ["push_url", "register_url", "wechat_push_url", "host", "port", "password", "db"]
+        },
+        "thirdparty": {
+            "description": "qjcg third part config",
+            "type": "object",
+            "properties": {
+                "thread_num": {
+                    "description": "third part thread num",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                },
+                "most_try": {
+                    "description": "third part most try num",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                },
+                "host": {
+                    "description": "third part connect url",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "port": {
+                    "description": "third part port num",
+                    "type": "integer",
+                    "minimum": 1024,
+                    "maximum": 65535
+                },
+                "yh_cids": {
+                    "description": "third part port num",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                }
+            },
+            "required": ["thread_num", "most_try", "host", "port", "yh_cids"]
+        },
+        "special": {
+            "description": "qjcg special config",
+            "type": "object",
+            "properties": {
+                "shouqi_cid": {
+                    "type": "string"
+                }
+            },
+            "required": ["shouqi_cid"]
+        }
+    },
+    "required": ["eventer", "gateway", "redis", "mysql", "cell",
+        "push", "thirdparty", "special"]
+}
