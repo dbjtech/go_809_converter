@@ -16,4 +16,5 @@ func Load() {
 		fmt.Printf("Error loading configuration: %s\n", err)
 		return
 	}
+	fmt.Println("env: ", config.Get("CONFIG_CENTER.host"))
 }
