@@ -52,6 +52,17 @@ func (u *UpLinkWriter) Close(data []byte) {
 	u.Writer.Close()
 }
 
+func Uplink() {
+	host := config.String("UPLINK.govServerIp")
+	port := config.String("UPLINK.govServerPort")
+	statuscode := 1
+	for 1 == statuscode {
+		statuscode = getUplinkConnection(host, port)
+	}
+	log.Println("exit uplink")
+	return
+}
+
 // Login todo 待测试
 func Login(conn *websocket.Conn) []byte {
 	userId := config.Int("UPLINK.platformUserId")
@@ -128,7 +139,21 @@ func getUplinkConnection(host, port string) int {
 				disconnectUplink(ul_writer)
 				break
 			}
-			accec
+			execute := acceptUpLinkConsole(ul_writer)
+			timeoutCounter = timeoutCounter + 1
+			if execute == -1 {
+				timeoutCounter = 0
+			}
+			if timeoutCounter != 0 && timeoutCounter%6 == 0 {
+				log.Printf("UPLINK timeout [X%s] \n", timeoutCounter)
+			}
+			log.Printf("╪ UPLINK long time no ACK. CLOSE UPLINK-CHANEL")
+			handlers.CsCenter.Uwriter = nil
+			time.Sleep(1 * time.Second)
+			if !handlers.CsCenter.Interrupted {
+				disconnectUplink(ul_writer)
+				return getUplinkConnection(host, port)
+			}
 		}
 
 	}
@@ -154,14 +179,16 @@ func disconnectUplink(ulwriter *UpLinkWriter) {
 }
 
 func acceptUpLinkConsole(conn *UpLinkWriter) (res int) {
-	ch := make(chan struct{})
+	//ch := make(chan struct{})
 	go func() {
 		// todo 这里可能有点大问题，等后边能跑了之后再来看看
 		_, data, err := conn.Writer.ReadMessage()
 		if data == nil || len(data) == 0 || err != nil {
 			res = -1
+			return
 		}
-		ch <- struct{}{}
+		dealUpLinkConsole(conn, data)
+		//ch <- struct{}{}
 	}()
 	select {
 	case <-time.After(10 * time.Second):
@@ -169,8 +196,6 @@ func acceptUpLinkConsole(conn *UpLinkWriter) (res int) {
 			heartBeat(conn)
 		}
 		return -1
-	case <-ch:
-		deallink
 	}
 }
 
@@ -179,8 +204,16 @@ func dealUpLinkConsole(conn *UpLinkWriter, data []byte) {
 	log.Println(message)
 	if message != nil {
 		if message.Header.Type == businessType.UP_CONNECT_RSP {
+			// todo 这一截有点大问题，压根不晓得是啥子类型，就用了原本的那种方式
 			upresp := utils.UnpackMsgBody(message)
+			log.Println(upresp.(po.UpLoginResp))
+			conn.Update()
+		} else if message.Header.Type == businessType.UP_LINKTEST_RSP {
+			conn.Update()
 		}
-
+	} else {
+		if conn.IsHbTime() {
+			heartBeat(conn)
+		}
 	}
 }

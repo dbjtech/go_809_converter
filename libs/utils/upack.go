@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"github.com/gookit/config/v2"
 	"github.com/peifengll/go_809_converter/converter/handlers/po"
@@ -192,8 +193,132 @@ func downBaseMsgVehicleAddedUnpacker(body []byte) any {
 	}
 }
 
-func upBaseMsgVehicleAddedUnpacker(body []byte) any {
+func carInfoUnpacker(body []byte) *po.CarInfo {
+	c := &po.CarInfo{}
+	return c.Decode(body)
+}
 
+func upBaseMsgVehicleAddedUnpacker(body []byte) any {
+	vehicleNo := string(bytes.TrimRight(body[:21], "\x00"))
+	vehicleColor := int(body[21])
+	dataType := int(binary.BigEndian.Uint16(body[22:24]))
+	dataLength := int(binary.BigEndian.Uint32(body[24:28]))
+	carInfoData := body[28 : 28+dataLength]
+	carInfo := carInfoUnpacker(carInfoData)
+	return &po.VehicleAdded{
+		VehicleNo:    vehicleNo,
+		VehicleColor: vehicleColor,
+		DataType:     dataType,
+		DataLength:   dataLength,
+		CarInfo:      carInfo,
+	}
+}
+
+func ctrlMsgTextInfoUnpacker(data []byte) any {
+	msgSequence := binary.BigEndian.Uint32(data[:4])
+	msgPriority := data[4]
+	msgLength := binary.BigEndian.Uint32(data[5:9])
+	msgContent := string(data[9:])
+	return &po.CtrlMsgTextInfo{
+		MsgSequence: msgSequence,
+		MsgPriority: msgPriority,
+		MsgLength:   msgLength,
+		MsgContent:  msgContent,
+	}
+}
+
+// DownCtrlMsgUnpacker 解析下行控制消息
+func downCtrlMsgUnpacker(body []byte) any {
+	vehicleNo := strings.TrimRight(string(body[:21]), "\x00")
+	vehicleColor := body[21]
+	dataType := binary.BigEndian.Uint16(body[22:24])
+	dataLength := binary.BigEndian.Uint32(body[24:28])
+	data := body[28 : 28+dataLength]
+	return &po.DownCtrlMsg{
+		VehicleNo:    vehicleNo,
+		VehicleColor: vehicleColor,
+		DataType:     dataType,
+		DataLength:   dataLength,
+		CtrlMsg:      data,
+	}
+}
+
+func downCtrlMsgTextInfoUnpacker(body []byte) any {
+
+	vehicleNo := strings.TrimRight(string(body[:21]), "\x00")
+	vehicleColor := body[21]
+	dataType := binary.BigEndian.Uint16(body[22:24])
+	dataLength := binary.BigEndian.Uint32(body[24:28])
+	data := body[28 : 28+dataLength]
+
+	ctrlMsgTextInfo := ctrlMsgTextInfoUnpacker(data).(*po.CtrlMsgTextInfo)
+
+	msg := &po.DownCtrlMsgText{
+		VehicleNo:    vehicleNo,
+		VehicleColor: vehicleColor,
+		DataType:     dataType,
+		DataLength:   dataLength,
+		CtrlMsgText:  ctrlMsgTextInfo,
+	}
+
+	return msg
+}
+
+// UpCtrlMsgTextInfoUnpacker 解析上行控制消息文本信息
+func upCtrlMsgTextInfoUnpacker(body []byte) any {
+	vehicleNo := strings.TrimRight(string(body[:21]), "\x00")
+	vehicleColor := body[21]
+	dataType := binary.BigEndian.Uint16(body[22:24])
+	dataLength := binary.BigEndian.Uint32(body[24:28])
+	msgID := binary.BigEndian.Uint32(body[28:32])
+	result := body[32]
+	return &po.UpCtrlMsgTextAck{
+		VehicleNo:    vehicleNo,
+		VehicleColor: vehicleColor,
+		DataType:     dataType,
+		DataLength:   dataLength,
+		MsgID:        msgID,
+		Result:       result,
+	}
+}
+
+func upCtrlMsgUnpacker(body []byte) any {
+	vehicleNo := strings.TrimRight(string(body[:21]), "\x00")
+	vehicleColor := body[21]
+	dataType := binary.BigEndian.Uint16(body[22:24])
+	dataLength := binary.BigEndian.Uint32(body[24:28])
+	msg := body[28 : 28+dataLength]
+	var data []byte
+	if err := json.Unmarshal(msg, &data); err != nil {
+		fmt.Println("Error decoding JSON:", err)
+	}
+	return &po.UpCtrlMsgAck{
+		VehicleNo:    vehicleNo,
+		VehicleColor: vehicleColor,
+		DataType:     dataType,
+		DataLength:   dataLength,
+		Data:         data,
+	}
+}
+
+// UpWarnMsgExtendsUnpacker 解析上行报警消息扩展
+func upWarnMsgExtendsUnpacker(body []byte) any {
+	vehicleNo := strings.TrimRight(string(body[:21]), "\x00")
+	vehicleColor := body[21]
+	dataType := binary.BigEndian.Uint16(body[22:24])
+	dataLength := binary.BigEndian.Uint32(body[24:28])
+	msg := body[28 : 28+dataLength]
+	var data []byte
+	if err := json.Unmarshal(msg, &data); err != nil {
+		fmt.Println("Error decoding JSON:", err)
+	}
+	return &po.UpWarnExtends{
+		VehicleNo:    vehicleNo,
+		VehicleColor: vehicleColor,
+		DataType:     dataType,
+		DataLength:   dataLength,
+		Data:         data,
+	}
 }
 
 var UnpackPool = map[int]UnpackFunc{
@@ -209,12 +334,12 @@ var UnpackPool = map[int]UnpackFunc{
 	businessType.UP_EXG_MSG_REAL_LOCATION:      realLocationUnpacker,
 	businessType.UP_BASE_MSG:                   upBaseMsgUnpacker,
 	businessType.DOWN_BASE_MSG_VEHICLE_ADDED:   downBaseMsgVehicleAddedUnpacker,
-	businessType.UP_BASE_MSG_VEHICLE_ADDED_ACK: up_base_msg_vehicle_added_unpacker,
-	businessType.DOWN_CTRL_MSG_TEXT_INFO:       down_ctrl_msg_text_info_unpacker,
-	businessType.DOWN_CTRL_MSG:                 down_ctrl_msg_unpacker,
-	businessType.UP_CTRL_MSG_TEXT_INFO_ACK:     up_ctrl_msg_text_info_unpacker,
-	businessType.UP_CTRL_MSG:                   up_ctrl_msg_unpacker,
-	businessType.UP_WARN_MSG_EXTENDS:           up_warn_msg_extends_unpacker,
+	businessType.UP_BASE_MSG_VEHICLE_ADDED_ACK: upBaseMsgVehicleAddedUnpacker,
+	businessType.DOWN_CTRL_MSG_TEXT_INFO:       ctrlMsgTextInfoUnpacker,
+	businessType.DOWN_CTRL_MSG:                 downCtrlMsgUnpacker,
+	businessType.UP_CTRL_MSG_TEXT_INFO_ACK:     upCtrlMsgTextInfoUnpacker,
+	businessType.UP_CTRL_MSG:                   upCtrlMsgUnpacker,
+	businessType.UP_WARN_MSG_EXTENDS:           upWarnMsgExtendsUnpacker,
 }
 
 // todo 能用否
@@ -260,6 +385,23 @@ func gnssDataUnpacker(body []byte) *po.GNSSData {
 	}
 }
 
-func UnpackMsgBody(msg *po.Message) {
+func UnpackMsgBody(msg *po.Message) any {
+	subtype := getMsgSubType(msg)
+	var unpackerfunc UnpackFunc
+	if subtype != 0 {
+		unpackerfunc = UnpackPool[subtype]
+	}
+	if unpackerfunc == nil {
+		unpackerfunc = UnpackPool[msg.Header.Type]
+	}
+	if unpackerfunc == nil {
+		return nil
+	}
+	encryptflag := msg.Header.Crypto
+	msgbody := msg.Body
+	if encryptflag != 0 {
+		msgbody = Encrypt(msg.Header.Key, msgbody)
+	}
+	return unpackerfunc(msgbody)
 
 }

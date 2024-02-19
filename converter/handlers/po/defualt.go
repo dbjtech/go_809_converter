@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/gookit/config/v2"
 	"github.com/peifengll/go_809_converter/libs/constants/terminal"
@@ -255,6 +256,7 @@ func (c *CarInfo) Decode(data []byte) *CarInfo {
 		}
 	}
 
+	// todo 这里多半还是有点问题
 	return NewCarInfo(
 		cls["vin"].(string),
 		parseInt(cls["vehicle_color"]),
@@ -262,7 +264,6 @@ func (c *CarInfo) Decode(data []byte) *CarInfo {
 		parseInt(cls["trans_type"]),
 		cls["vehicle_nationality"].(string),
 		cls["owers_name"].(string),
-		nil,
 	)
 }
 
@@ -286,12 +287,12 @@ type VehicleAdded struct {
 	VehicleColor int
 	DataType     int
 	DataLength   int
-	CarInfo      string
+	CarInfo      *CarInfo
 }
 
 func (v *VehicleAdded) Encode() []byte {
 	vehicleNo := append([]byte(v.VehicleNo), make([]byte, 21-len(v.VehicleNo))...)
-	data := []byte(v.CarInfo)
+	data := v.CarInfo.Encode()
 	v.DataLength = len(data)
 
 	return append(
@@ -306,4 +307,191 @@ func (v *VehicleAdded) Encode() []byte {
 
 func (v *VehicleAdded) String() string {
 	return fmt.Sprintf("%v", v)
+}
+
+type CtrlMsgTextInfo struct {
+	MsgSequence uint32
+	MsgPriority uint8
+	MsgLength   uint32
+	MsgContent  string
+}
+
+// todo 确认情况
+func (c *CtrlMsgTextInfo) Encode() []byte {
+	msgSequenceBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(msgSequenceBytes, c.MsgSequence)
+	msgPriorityBytes := []byte{c.MsgPriority}
+	msgLengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(msgLengthBytes, c.MsgLength)
+	msgContentBytes := []byte(c.MsgContent)
+	return append(append(append(msgSequenceBytes, msgPriorityBytes...), msgLengthBytes...), msgContentBytes...)
+}
+
+type DownCtrlMsgText struct {
+	VehicleNo    string
+	VehicleColor byte
+	DataType     uint16
+	DataLength   uint32
+	CtrlMsgText  *CtrlMsgTextInfo
+}
+
+func (d *DownCtrlMsgText) Encode() []byte {
+	vehicleNo := []byte(d.VehicleNo)
+	vehicleNo = append(vehicleNo, bytes.Repeat([]byte{0}, 21-len(vehicleNo))...)
+	data := d.CtrlMsgText.Encode()
+	d.DataLength = uint32(len(data))
+
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, d.VehicleColor)
+	binary.Write(buf, binary.BigEndian, d.DataType)
+	binary.Write(buf, binary.BigEndian, d.DataLength)
+	buf.Write(data)
+
+	return buf.Bytes()
+}
+
+func (d DownCtrlMsgText) String() string {
+	return fmt.Sprintf("%+v", d)
+}
+
+// UpCtrlMsgTextAck 是上行控制消息文本应答的结构体
+type UpCtrlMsgTextAck struct {
+	VehicleNo    string
+	VehicleColor byte
+	DataType     uint16
+	DataLength   uint32
+	MsgID        uint32
+	Result       byte
+}
+
+// Encode 方法用于编码上行控制消息文本应答
+func (u *UpCtrlMsgTextAck) Encode() []byte {
+	vehicleNo := []byte(u.VehicleNo)
+	vehicleNo = append(vehicleNo, bytes.Repeat([]byte{0}, 21-len(vehicleNo))...)
+	data := append(utils.Pack2uhex(4, u.MsgID), utils.Pack2uhex(1, u.Result)...)
+	u.DataLength = uint32(len(data))
+	return append(append(append(append(vehicleNo,
+		utils.Pack2uhex(1, u.VehicleColor)...),
+		utils.Pack2uhex(2, u.DataType)...),
+		utils.Pack2uhex(4, u.DataLength)...),
+		data...)
+}
+
+// String 方法用于返回结构体的字符串表示
+func (u UpCtrlMsgTextAck) String() string {
+	return fmt.Sprintf("%+v", u)
+}
+
+// DownCtrlMsg 是下行控制消息的结构体
+type DownCtrlMsg struct {
+	VehicleNo    string
+	VehicleColor byte
+	DataType     uint16
+	DataLength   uint32
+	CtrlMsg      []byte
+}
+
+// Encode 方法用于编码下行控制消息
+func (d *DownCtrlMsg) Encode() []byte {
+	vehicleNo := []byte(d.VehicleNo)
+	vehicleNo = append(vehicleNo, bytes.Repeat([]byte{0}, 21-len(vehicleNo))...)
+	data, _ := json.Marshal(d.CtrlMsg)
+	d.DataLength = uint32(len(data))
+	return append(append(append(append(vehicleNo,
+		utils.Pack2uhex(1, d.VehicleColor)...),
+		utils.Pack2uhex(2, d.DataType)...),
+		utils.Pack2uhex(4, d.DataLength)...),
+		data...)
+}
+
+// String 方法用于返回结构体的字符串表示
+func (d DownCtrlMsg) String() string {
+	return fmt.Sprintf("%+v", d)
+}
+
+// UpWarnMsgExtends 是上行报警消息扩展的结构体
+type UpWarnMsgExtends struct {
+	VehicleNo    string
+	VehicleColor byte
+	DataType     uint16
+	DataLength   uint32
+	Data         map[string]interface{}
+}
+
+// Encode 方法用于编码上行报警消息扩展
+func (u *UpWarnMsgExtends) Encode() []byte {
+	vehicleNo := []byte(u.VehicleNo)
+	vehicleNo = append(vehicleNo, bytes.Repeat([]byte{0}, 21-len(vehicleNo))...)
+	data, _ := json.Marshal(u.Data)
+	u.DataLength = uint32(len(data))
+	return append(append(append(append(vehicleNo,
+		utils.Pack2uhex(1, u.VehicleColor)...),
+		utils.Pack2uhex(2, u.DataType)...),
+		utils.Pack2uhex(4, u.DataLength)...),
+		data...)
+}
+
+// String 方法用于返回结构体的字符串表示
+func (u UpWarnMsgExtends) String() string {
+	return fmt.Sprintf("%+v", u)
+}
+
+// UpWarnExtends 表示上行报警消息扩展
+type UpWarnExtends struct {
+	VehicleNo    string
+	VehicleColor byte
+	DataType     uint16
+	DataLength   uint32
+	Data         []byte
+}
+
+// Encode 方法用于编码上行报警消息扩展
+func (u *UpWarnExtends) Encode() []byte {
+	vehicleNo := []byte(u.VehicleNo)
+	vehicleNo = append(vehicleNo, bytes.Repeat([]byte{0}, 21-len(vehicleNo))...)
+	data, _ := json.Marshal(u.Data)
+	u.DataLength = uint32(len(data))
+	if int(u.DataLength) > (1 << 32) {
+		panic("message length too long")
+	}
+	return append(append(append(append(vehicleNo,
+		utils.Pack2uhex(1, u.VehicleColor)...),
+		utils.Pack2uhex(2, u.DataType)...),
+		utils.Pack2uhex(4, u.DataLength)...),
+		data...)
+}
+
+// String 方法用于返回结构体的字符串表示
+func (u UpWarnExtends) String() string {
+	return fmt.Sprintf("%+v", u)
+}
+
+// UpCtrlMsgAck 表示上行控制消息应答
+type UpCtrlMsgAck struct {
+	VehicleNo    string
+	VehicleColor byte
+	DataType     uint16
+	DataLength   uint32
+	Data         []byte
+}
+
+// Encode 方法用于编码上行控制消息应答
+func (u *UpCtrlMsgAck) Encode() []byte {
+	vehicleNo := []byte(u.VehicleNo)
+	vehicleNo = append(vehicleNo, bytes.Repeat([]byte{0}, 21-len(vehicleNo))...)
+	data, _ := json.Marshal(u.Data)
+	u.DataLength = uint32(len(data))
+	if int(u.DataLength) > (1 << 32) {
+		panic("message length too long")
+	}
+	return append(append(append(append(vehicleNo,
+		utils.Pack2uhex(1, u.VehicleColor)...),
+		utils.Pack2uhex(2, u.DataType)...),
+		utils.Pack2uhex(4, u.DataLength)...),
+		data...)
+}
+
+// String 方法用于返回结构体的字符串表示
+func (u UpCtrlMsgAck) String() string {
+	return fmt.Sprintf("%+v", u)
 }

@@ -74,7 +74,7 @@ func BuildMessageP(btype int, body []byte, ec int) []byte {
 	})
 }
 
-func getMsgSubType(msg po.Message) int {
+func getMsgSubType(msg *po.Message) int {
 	primeType := msg.Header.Type
 	subType := 0
 	types := []int{businessType.UP_EXG_MSG,
