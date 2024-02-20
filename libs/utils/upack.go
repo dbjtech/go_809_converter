@@ -51,7 +51,7 @@ func Unpack(rData []byte) *po.Message {
 	key := int(binary.BigEndian.Uint32(packet[18:22]))
 	body := packet[22 : len(packet)-2]
 
-	header := po.Header{
+	header := &po.Header{
 		Length:          dataLen,
 		Serial:          serial,
 		Type:            busType,
@@ -62,7 +62,7 @@ func Unpack(rData []byte) *po.Message {
 	}
 
 	return &po.Message{
-		Header: &header,
+		Header: header,
 		Body:   body,
 		CRC:    crcCode,
 	}
@@ -79,7 +79,7 @@ func upLoginUnpacker(body []byte) interface{} {
 	downlinkIP := string(body[12 : 12+downlinkIPEnd])
 	downlinkPort := binary.BigEndian.Uint16(body[44:46])
 
-	return po.UpLogin{
+	return &po.UpLogin{
 		UserID:       int(userID),
 		Password:     password,
 		DownLinkIP:   downlinkIP,
@@ -91,7 +91,7 @@ func upLoginRespUnpacker(body []byte) any {
 	result := int(body[0])
 	verifyCode := int(binary.BigEndian.Uint32(body[1:5]))
 
-	return po.UpLoginResp{
+	return &po.UpLoginResp{
 		Result:     result,
 		VerifyCode: verifyCode,
 	}
@@ -108,12 +108,12 @@ func UpLoginRespUnpacker(body []byte) *po.UpLoginResp {
 }
 
 func emptyUnpacker(body []byte) any {
-	return po.EmptyBody{}
+	return &po.EmptyBody{}
 }
 
 func downLoginUnpacker(body []byte) any {
 	verify := int(binary.BigEndian.Uint32(body[:4]))
-	return po.DownLogin{verify}
+	return &po.DownLogin{verify}
 }
 
 func DownLoginRespUnpacker(body []byte) *po.DownLoginResp {
@@ -166,7 +166,7 @@ func realLocationUnpacker(body []byte) any {
 	hp, tp = tp, tp+gnssDataLen
 	gnssData := body[hp:tp]
 
-	return po.RealLocation{
+	return &po.RealLocation{
 		VehicleNo:    vehicleNo,
 		TerminalID:   sn,
 		VehicleColor: vehicleColor,
