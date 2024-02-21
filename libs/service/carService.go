@@ -3,30 +3,26 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/peifengll/go_809_converter/libs/constants/terminal"
+	"github.com/peifengll/go_809_converter/libs/constants/ucmtiResult"
 	"log"
 	"net/http"
 )
 
-type CarService struct{}
-
-type FuelCut struct {
-	Type    string `json:"type"`
-	Payload string `json:"payload"`
+type CarService struct {
 }
 
 func (cs CarService) GetCarInfoByCarID(carID string) (map[string]interface{}, error) {
-	// Implement logic to get car info by car ID
+
 	return nil, nil
 }
 
 func (cs CarService) SwitchCarSettings(cnum string, sets string) int {
-	logger := log.New(nil, "", 0)
 
 	var dSettings map[string]interface{}
 	err := json.Unmarshal([]byte(sets), &dSettings)
 	if err != nil {
-		logger.Println("Error parsing JSON:", err)
-		return UCMTI_RESULT.FAILURE
+		log.Println("Error parsing JSON:", err)
 	}
 
 	fuelCut := dSettings["fuel_cut"].(map[string]interface{})
@@ -35,10 +31,10 @@ func (cs CarService) SwitchCarSettings(cnum string, sets string) int {
 	optKey := fmt.Sprintf("%s%s", optType, payload)
 
 	// Simulated example of using DownLinkControl.get(optKey)
-	cmd := DownLinkControl.get(optKey)
+	cmd := terminal.DownLinkControl[optKey]
 	if cmd == "" {
-		logger.Println("Invalid command:", sets)
-		return UCMTI_RESULT.DENY
+		log.Println("Invalid command:", sets)
+		return ucmtiResult.DENY
 	}
 
 	// Simulated example of setting fuel cut by cnum
