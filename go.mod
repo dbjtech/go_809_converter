@@ -5,6 +5,7 @@ go 1.21.4
 require (
 	github.com/gookit/config/v2 v2.2.5
 	github.com/gorilla/websocket v1.5.1
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/redis/go-redis/v9 v9.4.0
 	gorm.io/gorm v1.25.6
 )
