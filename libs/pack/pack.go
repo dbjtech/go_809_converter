@@ -1,9 +1,12 @@
-package utils
+package pack
 
 import (
 	"bytes"
 	"encoding/binary"
+
+	"github.com/gookit/config/v2"
 	"github.com/peifengll/go_809_converter/converter/handlers/po"
+	"github.com/peifengll/go_809_converter/libs/utils"
 )
 
 // Pack2uhex  todo 这个玩意儿有大问题！！
@@ -89,4 +92,31 @@ func Pack(message *po.Message) []byte {
 	result = append(result, 0x5d)
 
 	return result
+}
+
+// BuildMessageP todo 能用吗？
+func BuildMessageP(btype int, body []byte, ec int) []byte {
+	connectCode := config.Int("platformId")
+	version := config.String("protocol_version")
+	cryptoPacketTypes := config.Get("crypto_packet_types").([]byte)
+	if cryptoPacketTypes != nil {
+		_btype := byte(btype)
+		for _, t := range cryptoPacketTypes {
+			if t == _btype {
+				ec = 1
+				break
+			}
+		}
+	}
+	key := config.Int("encryptKey")
+	if ec == 0 {
+		key = 0
+	}
+	header := po.NewHeader(0, utils.PacketSerial.Get(), btype, connectCode, version, ec, key)
+
+	return Pack(&po.Message{
+		Header: header,
+		Body:   body,
+		CRC:    0,
+	})
 }

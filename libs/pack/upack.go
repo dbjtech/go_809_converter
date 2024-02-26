@@ -1,15 +1,17 @@
-package utils
+package pack
 
 import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/gookit/config/v2"
 	"github.com/peifengll/go_809_converter/converter/handlers/po"
 	"github.com/peifengll/go_809_converter/libs/constants/businessType"
-	"log"
-	"strings"
+	"github.com/peifengll/go_809_converter/libs/utils"
 )
 
 // Unpack todo 有一个要测试的
@@ -38,7 +40,7 @@ func Unpack(rData []byte) *po.Message {
 	packet = packet[1 : packetLen-1]
 	uncrc := packet[:len(packet)-2]
 	crcCode := int(binary.BigEndian.Uint16(packet[len(packet)-2:]))
-	if Crc16(uncrc) != crcCode {
+	if utils.Crc16(uncrc) != crcCode {
 		log.Println("CRC16 code not match")
 		return nil
 	}
@@ -113,7 +115,7 @@ func emptyUnpacker(body []byte) any {
 
 func downLoginUnpacker(body []byte) any {
 	verify := int(binary.BigEndian.Uint32(body[:4]))
-	return &po.DownLogin{verify}
+	return &po.DownLogin{VerifyCode: verify}
 }
 
 func DownLoginRespUnpacker(body []byte) *po.DownLoginResp {
@@ -385,6 +387,30 @@ func gnssDataUnpacker(body []byte) *po.GNSSData {
 	}
 }
 
+func getMsgSubType(msg *po.Message) int {
+	primeType := msg.Header.Type
+	subType := 0
+	types := []int{businessType.UP_EXG_MSG,
+		businessType.DOWN_EXG_MSG,
+		businessType.UP_CTRL_MSG,
+		businessType.DOWN_CTRL_MSG,
+		businessType.UP_WARN_MSG,
+	}
+	for i := range types {
+		if primeType == types[i] {
+			if primeType == businessType.UP_WARN_MSG {
+				log.Println("--")
+			}
+			dataType := msg.Body[22:24]
+			// 将字节切片转换为 uint16
+			subType = int(dataType[0])<<8 | int(dataType[1])
+			break
+		}
+	}
+
+	return subType
+}
+
 func UnpackMsgBody(msg *po.Message) any {
 	subtype := getMsgSubType(msg)
 	var unpackerfunc UnpackFunc
@@ -400,7 +426,7 @@ func UnpackMsgBody(msg *po.Message) any {
 	encryptflag := msg.Header.Crypto
 	msgbody := msg.Body
 	if encryptflag != 0 {
-		msgbody = Encrypt(msg.Header.Key, msgbody)
+		msgbody = po.Encrypt(msg.Header.Key, msgbody)
 	}
 	return unpackerfunc(msgbody)
 

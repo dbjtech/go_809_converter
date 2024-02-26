@@ -148,7 +148,6 @@ func (ch *CacheHelper) ClearAll(category string) {
 
 // StartListening starts listening for cache changes.
 func (ch *CacheHelper) StartListening(ctx context.Context, callback func(ctx context.Context), args ...string) {
-	panic("not implemented")
 	ch.callbacksLock.Lock()
 	defer ch.callbacksLock.Unlock()
 

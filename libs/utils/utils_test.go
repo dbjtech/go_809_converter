@@ -35,7 +35,7 @@ func TestPack2uhex(t *testing.T) {
 	}
 
 	for i := 1; i <= 11; i++ {
-		result := Pack2uhex(i, testData[i])
+		result := pack.Pack2uhex(i, testData[i])
 
 		fmt.Printf("size=%d, data=%v, result=", i, testData[i])
 		fmt.Println(result)
