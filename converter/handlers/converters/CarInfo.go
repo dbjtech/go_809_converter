@@ -1,17 +1,13 @@
 package converters
 
-import (
-	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
-)
+import "fmt"
 
 type CarInfoConverter struct {
-	Db    *gorm.DB
-	Redis *redis.Client
+	*BaseConverter
 }
 
-func (c *CarInfoConverter) convert() {
-
+func (c *CarInfoConverter) Convert(item string) ([]byte, error) {
+	return nil, fmt.Errorf("Convert method is not implemented")
 }
 
 type BindInfoS99 struct {

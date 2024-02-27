@@ -1,4 +1,4 @@
-package repo
+package model
 
 // TCar 车辆表
 type TCar struct {

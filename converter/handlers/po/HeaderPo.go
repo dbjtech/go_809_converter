@@ -2,7 +2,6 @@ package po
 
 import (
 	"encoding/binary"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -86,11 +85,4 @@ func pack2uhex(size, value int) []byte {
 	buf := make([]byte, size)
 	binary.BigEndian.PutUint32(buf, uint32(value))
 	return buf
-}
-
-func main() {
-	// Example usage
-	header := NewHeader(10, 1, 0, 20, "1.2", 1, 100)
-	fmt.Println(header)
-	fmt.Printf("%x\n", header.Encode())
 }

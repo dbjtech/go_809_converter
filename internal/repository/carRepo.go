@@ -1,33 +1,38 @@
-package repo
+package repository
 
 import "C"
 import (
 	"errors"
+	"github.com/peifengll/go_809_converter/internal/model"
 	"github.com/peifengll/go_809_converter/libs/constants/terminal"
 	"gorm.io/gorm"
 	"log"
 )
 
-var CarRepo = &carRepo{}
+type CarRepoInterface interface {
+	GetCarInfoByCarID(string) *model.TCar
+	GetSettingsByCNum(string) *model.TTerminalInfo
+	UpdateFuelCutByCNum(string, string, int8) *model.TTerminalInfo
+}
+
+func NewCarRepo(db *gorm.DB) CarRepoInterface {
+	return &carRepo{DB: db}
+}
 
 type carRepo struct {
 	*gorm.DB
 }
 
-func (cr *carRepo) GetCarByCarID(carID string) *TCar {
+func (cr *carRepo) GetCarInfoByCarID(carID string) *model.TCar {
 	// todo  这里暂时还没有去做那个计时器
-	t := &TCar{}
+	t := &model.TCar{}
 	cr.Where("car_id = ?", carID).First(t)
 	return t
 
 }
 
-func (cr *carRepo) UpdateFuelCutByCNum(cnum string, optType string, payload int8) *TTerminalInfo {
-	terminalj, err := cr.GetSettingsByCNum(cnum)
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
+func (cr *carRepo) UpdateFuelCutByCNum(cnum string, optType string, payload int8) *model.TTerminalInfo {
+	terminalj := cr.GetSettingsByCNum(cnum)
 	if terminalj == nil {
 		return nil
 	}
@@ -40,8 +45,9 @@ func (cr *carRepo) UpdateFuelCutByCNum(cnum string, optType string, payload int8
 		terminalj.DormantFuelExeStatus = int8(terminal.SwitchStatus["downlink"])
 	}
 	// todo 待测试，看更改会不会出问题
-	err = cr.Model(&TTerminalInfo{}).Updates(terminalj).Error
+	err := cr.Model(&model.TTerminalInfo{}).Updates(terminalj).Error
 	if err != nil {
+		log.Println(err)
 		return nil
 	}
 	return terminalj
@@ -62,8 +68,8 @@ type TerminalInfoJ struct {
 	FuelCutLock          int8
 }
 
-func (cr *carRepo) GetSettingsByCNum(cnum string) (*TTerminalInfo, error) {
-	var terminalj TTerminalInfo
+func (cr *carRepo) GetSettingsByCNum(cnum string) *model.TTerminalInfo {
+	var terminalj model.TTerminalInfo
 	if err := cr.Table("t_terminal_info").
 		Select("t_terminal_info.tid, t_terminal_info.wired_fuel_status, t_terminal_info.wired_fuel_exp_status, "+
 			"t_terminal_info.config_change, t_terminal_info.sn, t_terminal_info.id, t_terminal_info.wired_fuel_exe_status, "+
@@ -75,9 +81,11 @@ func (cr *carRepo) GetSettingsByCNum(cnum string) (*TTerminalInfo, error) {
 		Where("t_cars.cnum = ? OR t_cars.vin = ?", cnum, cnum).
 		First(&terminalj).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil
+		} else {
+			log.Println(err)
 		}
-		return nil, err
+		return nil
 	}
-	return &terminalj, nil
+	return &terminalj
 }

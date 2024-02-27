@@ -3,20 +3,21 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/peifengll/go_809_converter/internal/helpers"
+	"github.com/peifengll/go_809_converter/internal/model"
 	"github.com/peifengll/go_809_converter/libs/constants/terminal"
 	"github.com/peifengll/go_809_converter/libs/constants/ucmtiResult"
-	"github.com/peifengll/go_809_converter/libs/helpers"
 	"log"
 	"net/http"
 )
 
 type CarService struct {
+	ch *helpers.CarHelper
 }
 
-func (cs *CarService) GetCarInfoByCarID(carID string) (map[string]interface{}, error) {
-	helpers.CarHelper{}.GetCarInfoByCarID(carID)
-
-	return nil, nil
+func (cs *CarService) GetCarInfoByCarID(carID string) *model.TCar {
+	car := cs.ch.GetCarInfoByCarID(carID)
+	return car
 }
 
 func (cs *CarService) SwitchCarSettings(cnum string, sets string) int {

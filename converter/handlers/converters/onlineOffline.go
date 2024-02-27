@@ -2,10 +2,10 @@ package converters
 
 import "fmt"
 
-type CarRegisterConverter struct {
+type OnlineOfflineConverter struct {
 	*BaseConverter
 }
 
-func (c *CarRegisterConverter) Convert(item string) ([]byte, error) {
+func (c *OnlineOfflineConverter) Convert(item string) ([]byte, error) {
 	return nil, fmt.Errorf("Convert method is not implemented")
 }

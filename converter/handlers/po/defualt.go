@@ -415,24 +415,24 @@ type UpWarnMsgExtends struct {
 	VehicleColor byte
 	DataType     uint16
 	DataLength   uint32
-	Data         map[string]interface{}
+	Data         string
 }
 
 // Encode 方法用于编码上行报警消息扩展
 func (u *UpWarnMsgExtends) Encode() []byte {
 	vehicleNo := []byte(u.VehicleNo)
 	vehicleNo = append(vehicleNo, bytes.Repeat([]byte{0}, 21-len(vehicleNo))...)
-	data, _ := json.Marshal(u.Data)
-	u.DataLength = uint32(len(data))
+	//data, _ := json.Marshal(u.Data)
+	//u.DataLength = uint32(len(data))
 	return append(append(append(append(vehicleNo,
 		utils.Pack2uhex(1, u.VehicleColor)...),
 		utils.Pack2uhex(2, u.DataType)...),
 		utils.Pack2uhex(4, u.DataLength)...),
-		data...)
+		u.Data...)
 }
 
 // String 方法用于返回结构体的字符串表示
-func (u UpWarnMsgExtends) String() string {
+func (u *UpWarnMsgExtends) String() string {
 	return fmt.Sprintf("%+v", u)
 }
 
@@ -462,7 +462,7 @@ func (u *UpWarnExtends) Encode() []byte {
 }
 
 // String 方法用于返回结构体的字符串表示
-func (u UpWarnExtends) String() string {
+func (u *UpWarnExtends) String() string {
 	return fmt.Sprintf("%+v", u)
 }
 
@@ -494,4 +494,56 @@ func (u *UpCtrlMsgAck) Encode() []byte {
 // String 方法用于返回结构体的字符串表示
 func (u UpCtrlMsgAck) String() string {
 	return fmt.Sprintf("%+v", u)
+}
+
+type CarExtraInfo struct {
+	VehicleNo     string
+	VehicleColor  byte
+	DataType      uint16
+	DataLength    uint32
+	TerminalID    string
+	Concentration uint16
+}
+
+// todo 待测试这玩意儿对不对3·1
+func (c *CarExtraInfo) Encode() []byte {
+	vehicleNo := []byte(c.VehicleNo)
+	vehicleNo = append(vehicleNo, make([]byte, 21-len(vehicleNo))...)
+	terminalID := make([]byte, 7)
+	hexTerminalID := strings.TrimPrefix(c.TerminalID, "0x")
+	terminalIDBytes, err := hexStringToBytes(hexTerminalID)
+	if err != nil {
+		return nil
+	}
+	copy(terminalID, terminalIDBytes)
+	data := append(terminalID,
+		utils.Pack2uhex(2, c.Concentration)...)
+	c.DataLength = uint32(len(data))
+	return append(append(append(append(vehicleNo,
+		utils.Pack2uhex(1, c.VehicleColor)...),
+		utils.Pack2uhex(2, c.DataType)...),
+		utils.Pack2uhex(4, c.DataLength)...), data...)
+}
+
+func (c *CarExtraInfo) String() string {
+	return fmt.Sprintf("%+v", *c)
+}
+
+// hexStringToBytes 将十六进制字符串转换为字节流
+func hexStringToBytes(s string) ([]byte, error) {
+	if len(s)%2 != 0 {
+		return nil, fmt.Errorf("hexStringToBytes: invalid input length")
+	}
+	b := make([]byte, len(s)/2)
+	for i := 0; i < len(b); i++ {
+		n, err := fmt.Sscanf(s[2*i:2*i+2], "%02x", &b[i])
+		if n != 1 || err != nil {
+			return nil, fmt.Errorf("hexStringToBytes: invalid hex string")
+		}
+	}
+	return b, nil
+}
+
+func NormalStatus() int {
+	return terminal.Status.GPS + terminal.Status.LOCATED
 }
