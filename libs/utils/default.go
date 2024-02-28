@@ -1,6 +1,15 @@
 package utils
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
+)
 
 func Reverse([]byte) {
 
@@ -86,4 +95,53 @@ func Pack2uhex(size int, data interface{}) []byte {
 	default:
 		panic("please pack it yourself")
 	}
+}
+
+type CarIdWhitelist struct {
+	WhiteList map[string]bool
+}
+
+func (c *CarIdWhitelist) InitData() error {
+	// todo 这个方法也许会有问题，得问问
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Println("Failed to get current file info")
+		return errors.New("Failed to get current file info")
+	}
+	dir := filepath.Dir(filename)
+	fmt.Println(dir)
+	whiteListFilePath := filepath.Join(dir, "car_id_whitelist.json") // 根据实际文件路径修改
+	absPath, err := filepath.Abs(whiteListFilePath)
+	if err != nil {
+		return err
+	}
+
+	data, err := os.ReadFile(absPath)
+	if err != nil {
+		return err
+	}
+
+	var carList []string
+	if err := json.Unmarshal(data, &carList); err != nil {
+		return err
+	}
+
+	c.WhiteList = make(map[string]bool)
+	for _, carID := range carList {
+		c.WhiteList[carID] = true
+	}
+
+	return nil
+}
+
+func (c *CarIdWhitelist) InList(carID string) bool {
+	if c.WhiteList == nil {
+		if err := c.InitData(); err != nil {
+			// 处理初始化数据错误
+			return false
+		}
+	}
+
+	_, ok := c.WhiteList[carID]
+	return ok
 }

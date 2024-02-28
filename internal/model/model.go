@@ -222,3 +222,49 @@ type TAlarmRule struct {
 func (*TAlarmRule) TableName() string {
 	return "t_alarm_rule"
 }
+
+// TTerminalExtend 终端扩展表，用于记录某些终端额外增加的客户关心的字段，可能车管系统本身并不太关心。
+type TTerminalExtend struct {
+	Tid                         string `json:"tid" gorm:"tid"`
+	ProducerId                  string `json:"producer_id" gorm:"producer_id"`                                     // 终端制造商编码
+	TerminalVersion             string `json:"terminal_version" gorm:"terminal_version"`                           // 终端型号:由制造商自行定义，位数不
+	TerminalId                  string `json:"terminal_id" gorm:"terminal_id"`                                     // 由大写字母和数字组成，此终端 ID 由制\r\n造商自行定义，位数不足时，后补“0X00”
+	VehicleIdentificationNumber string `json:"vehicle_identification_number" gorm:"vehicle_identification_number"` // 车牌号或者车架号
+	Cdi                         int64  `json:"cdi" gorm:"cdi"`                                                     // 车辆数据变化期间，CAN实时数据最大上报间隔，单位：秒
+	Mcdi                        int64  `json:"mcdi" gorm:"mcdi"`                                                   // 车辆数据不变期间，CAN实时数据最大上报间隔，单位：秒
+	Bsi                         int64  `json:"bsi" gorm:"bsi"`                                                     // 基站信息定期上报时间间隔，单位：秒
+}
+
+// TableName 表名称
+func (*TTerminalExtend) TableName() string {
+	return "t_terminal_extend"
+}
+
+// T808Sn undefined
+type T808Sn struct {
+	ID              string `json:"id" gorm:"id"`                               // ID
+	EzeIdentifyCode string `json:"eze_identify_code" gorm:"eze_identify_code"` // 808设备标识码
+	Sn              string `json:"sn" gorm:"sn"`                               // SN
+	CreateTime      int64  `json:"create_time" gorm:"create_time"`             // 创建时间
+}
+
+// TableName 表名称
+func (*T808Sn) TableName() string {
+	return "t_808_sn"
+}
+
+// TTerminalEventHistory 终端设备事件历史表
+type TTerminalEventHistory struct {
+	ID              int64  `json:"id" gorm:"id"`
+	Sn              string `json:"sn" gorm:"sn"`                               // 设备SN
+	CreateAt        int64  `json:"create_at" gorm:"create_at"`                 // 事件发生时间
+	EventType       int16  `json:"event_type" gorm:"event_type"`               // 终端事件类型\r\nPS:暂时还没有完全确定
+	Name            string `json:"name" gorm:"name"`                           // 事件说明名称
+	Remark          string `json:"remark" gorm:"remark"`                       // 事件辅助说明
+	LocateErrorInfo string `json:"locate_error_info" gorm:"locate_error_info"` // 定位失败信息记录\r\n基站定位失败-记录基站相关信息的json\r\nwifi定位失败-记录wifi相关信息的json数组\r\n
+}
+
+// TableName 表名称
+func (*TTerminalEventHistory) TableName() string {
+	return "t_terminal_event_history"
+}

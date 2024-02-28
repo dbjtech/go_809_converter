@@ -1,13 +1,11 @@
 package converters
 
-import "fmt"
-
 type CarInfoConverter struct {
 	*BaseConverter
 }
 
-func (c *CarInfoConverter) Convert(item string) ([]byte, error) {
-	return nil, fmt.Errorf("Convert method is not implemented")
+func (c *CarInfoConverter) Convert(item string) []byte {
+	return nil
 }
 
 type BindInfoS99 struct {

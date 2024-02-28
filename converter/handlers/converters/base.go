@@ -6,6 +6,7 @@ import (
 	"github.com/peifengll/go_809_converter/libs/constants/businessType"
 	"github.com/peifengll/go_809_converter/libs/pack"
 	"gorm.io/gorm"
+	"log"
 )
 
 type BaseConverter struct {
@@ -19,11 +20,12 @@ func NewBaseConverter(db *gorm.DB) *BaseConverter {
 	}
 }
 
-func (c *BaseConverter) Convert(item string) ([]byte, error) {
-	return nil, fmt.Errorf("Convert method is not implemented")
+func (c *BaseConverter) Convert(item string) []byte {
+	log.Println(fmt.Errorf("Convert method is not implemented"))
+	return nil
 }
 
-func (c *BaseConverter) Handle(item string) ([]byte, error) {
+func (c *BaseConverter) Handle(item string) []byte {
 	return c.Convert(item)
 }
 
