@@ -5,18 +5,20 @@ import (
 	"github.com/peifengll/go_809_converter/converter/handlers/po"
 	"github.com/peifengll/go_809_converter/libs/constants/businessType"
 	"github.com/peifengll/go_809_converter/libs/pack"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"log"
 )
 
 type BaseConverter struct {
-	DB      *gorm.DB
+	dB      *gorm.DB
+	redis   *redis.Client
 	TraceID string
 }
 
 func NewBaseConverter(db *gorm.DB) *BaseConverter {
 	return &BaseConverter{
-		DB: db,
+		dB: db,
 	}
 }
 

@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"github.com/peifengll/go_809_converter/internal/model"
+	"github.com/peifengll/go_809_converter/libs/constants/terminal"
 	"gorm.io/gorm"
 	"log"
 )
@@ -80,15 +81,48 @@ func (r *TerminalRepo) GetWorkStatusBySn(sn string) *model.TTerminalInfo {
 	}
 	return &t
 }
-func (r *TerminalRepo) GetCarAndTermBySn(sn string) {
+func (r *TerminalRepo) GetCarAndTermBySn(sn string) *model.CarAndTerminal {
+	terminalAndCar := model.CarAndTerminal{}
 
+	err := r.db.Table("t_terminal_info as T").
+		Select("T.id, T.cid, T.tid, T.status, C.car_id,T.gps_lid, T.login, C.vin, C.cnum, C.id as t_car_id,T.gps, T.last_pkt_time,T.last_position_type").
+		Joins("JOIN t_car_terminal ct ON t.tid = ct.tid").
+		Joins("JOIN t_car C ON ct.car_id = c.car_id").
+		Where("t.sn = ?", sn).
+		First(&terminalAndCar).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Println(err)
+		}
+		return nil
+	}
+	return &terminalAndCar
 }
-func (r *TerminalRepo) GetCarStatusBySn() {
 
+func (r *TerminalRepo) GetCarStatusBySn(sn string) *model.CarStatus {
+	carStatus := model.CarStatus{}
+	err := r.db.Table("t_terminal_info as t").
+		Select("t.id,t.tid,t.status,c.car_id,t.gps_lid,c.vin,c.cnum,c.id as t_car_id,t.gps,t.last_pkt_time,t.last_position_type").
+		Joins("JOIN t_car_terminal ct ON t.tid = ct.tid").
+		Joins("JOIN t_car c ON ct.car_id = c.car_id").
+		Where("t.sn = ?", sn).
+		First(&carStatus).Error
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Println(err)
+		}
+		return nil
+	}
+	return &carStatus
 }
-func (r *TerminalRepo) RecordEventHistory() {
 
+func (r *TerminalRepo) RecordEventHistory(sn, name, remark, locateErrorInfo string, eventType int16) error {
+	panic("not  implemented")
 }
-func (r *TerminalRepo) ExeStatus() {
 
+func (r *TerminalRepo) ExeStatus(code int) (int, bool) {
+	if code == terminal.TerminalExe.SUCCESS {
+		return terminal.SwitchStatus["worked"], true
+	}
+	return terminal.SwitchStatus["sent"], false
 }

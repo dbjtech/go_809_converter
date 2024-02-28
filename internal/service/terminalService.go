@@ -1,18 +1,21 @@
 package service
 
 import (
-	"gorm.io/gorm"
+	"github.com/peifengll/go_809_converter/internal/model"
+	"github.com/peifengll/go_809_converter/internal/repository"
+	"log"
 )
 
 // TerminalService 结构
 type TerminalService struct {
+	repo *repository.TerminalRepo
 }
 
-// NewTerminalService 初始化 TerminalService
-func NewTerminalService(db *gorm.DB) *TerminalService {
-	return &TerminalService{}
-}
-
-func (t *TerminalService) GetTerminalByTid() {
-
+func (t *TerminalService) GetTerminalByTid(tid string) *model.TTerminalInfo {
+	terminal := t.repo.GetTerminalByTid(tid)
+	if terminal == nil {
+		log.Printf("terminal %s is miss \n", tid)
+		return nil
+	}
+	return terminal
 }

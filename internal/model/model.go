@@ -141,10 +141,10 @@ type TTerminalInfo struct {
 	Reboot                    int8   `json:"reboot" gorm:"reboot"`                                           // 重启设备标记,0:不操作;1:需要重启,-1:重启中（已下发重启命令)
 	WiredFuelExpStatus        int8   `json:"wired_fuel_exp_status" gorm:"wired_fuel_exp_status"`             // 有线断油控制，1:断开油路;0:闭合油路
 	WiredFuelExeStatus        int8   `json:"wired_fuel_exe_status" gorm:"wired_fuel_exe_status"`             // -1:指令下发中 0:未执行 1:已执行-成功 2: 已执行-失败
-	WiredFuelStatus           int8   `json:"wired_fuel_status" gorm:"wired_fuel_status"`                     // 有线断油设备上报值，1:断开油路;0:闭合油路
+	WiredFuelStatus           *int8  `json:"wired_fuel_status" gorm:"wired_fuel_status"`                     // 有线断油设备上报值，1:断开油路;0:闭合油路
 	DormantFuelExpStatus      int8   `json:"dormant_fuel_exp_status" gorm:"dormant_fuel_exp_status"`         // 暗锁断油控制，1:断开油路;0:闭合油路
 	DormantFuelExeStatus      int8   `json:"dormant_fuel_exe_status" gorm:"dormant_fuel_exe_status"`         // -1:指令下发中 0:未执行 1:已执行-成功 2: 已执行-失败
-	DormantFuelStatus         int8   `json:"dormant_fuel_status" gorm:"dormant_fuel_status"`                 // 暗锁断油设备上报值，1:断开油路;0:闭合油路
+	DormantFuelStatus         *int8  `json:"dormant_fuel_status" gorm:"dormant_fuel_status"`                 // 暗锁断油设备上报值，1:断开油路;0:闭合油路
 	FuelCutLock               int8   `json:"fuel_cut_lock" gorm:"fuel_cut_lock"`                             // 油电开关标志位：1<<0 - 有线断油开关 1<<1 - 暗锁断油开关
 	CarLed                    int8   `json:"car_led" gorm:"car_led"`                                         // 开关车灯,0: 关灯; 1: 开灯
 	CarLedDoStatus            int8   `json:"car_led_do_status" gorm:"car_led_do_status"`                     // 开关车灯执行状态:0-参数已经下发, 1-等待下发参数, 2-参数生效
@@ -267,4 +267,34 @@ type TTerminalEventHistory struct {
 // TableName 表名称
 func (*TTerminalEventHistory) TableName() string {
 	return "t_terminal_event_history"
+}
+
+type CarAndTerminal struct {
+	ID               int64  `gorm:"column:id" json:"id"`
+	Cid              string `json:"cid" gorm:"cid"`
+	TID              string `gorm:"column:tid" json:"tid"`
+	Status           int64  `gorm:"column:status" json:"status"`
+	CarID            string `gorm:"column:car_id" json:"car_id"`
+	GPSLID           int64  `gorm:"column:gps_lid" json:"gps_lid"`
+	Login            int64  `json:"login" gorm:"login"`
+	VIN              string `gorm:"column:vin" json:"vin"`
+	CNum             string `gorm:"column:cnum" json:"cnum"`
+	TCarId           int64  `gorm:"column:t_car_id" json:"t_car_id"`
+	GPS              string `gorm:"column:gps" json:"gps"`
+	LastPacketTime   int64  `gorm:"column:last_pkt_time" json:"last_pkt_time"`
+	LastPositionType string `gorm:"column:last_position_type" json:"last_position_type"`
+}
+
+type CarStatus struct {
+	ID               int64  `gorm:"column:id" json:"id"`
+	TID              string `gorm:"column:tid" json:"tid"`
+	Status           int64  `gorm:"column:status" json:"status"`
+	CarID            string `gorm:"column:car_id" json:"car_id"`
+	GPSLID           int64  `gorm:"column:gps_lid" json:"gps_lid"`
+	VIN              string `gorm:"column:vin" json:"vin"`
+	CNum             string `gorm:"column:cnum" json:"cnum"`
+	TCarId           int64  `gorm:"column:t_car_id" json:"t_car_id"`
+	GPS              string `gorm:"column:gps" json:"gps"`
+	LastPacketTime   int64  `gorm:"column:last_pkt_time" json:"last_pkt_time"`
+	LastPositionType string `gorm:"column:last_position_type" json:"last_position_type"`
 }

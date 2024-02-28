@@ -11,7 +11,7 @@ type csCenter struct {
 	Interrupted   bool
 	VerifyCode    int
 	Uwriter       *senders.UpLinkWriter
-	LongStopCache map[interface{}]interface{}
+	LongStopCache map[string]bool
 }
 
 func InitCeCenter() {
@@ -20,6 +20,6 @@ func InitCeCenter() {
 		Interrupted:   false,
 		VerifyCode:    0,
 		Uwriter:       nil,
-		LongStopCache: make(map[interface{}]interface{}),
+		LongStopCache: make(map[string]bool),
 	}
 }
