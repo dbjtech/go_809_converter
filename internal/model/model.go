@@ -298,3 +298,61 @@ type CarStatus struct {
 	LastPacketTime   int64  `gorm:"column:last_pkt_time" json:"last_pkt_time"`
 	LastPositionType string `gorm:"column:last_position_type" json:"last_position_type"`
 }
+
+// TCorp 集团表
+type TCorp struct {
+	ID                        int64  `json:"id" gorm:"id"`
+	Cid                       string `json:"cid" gorm:"cid"`                                                 // 集团用户注册登录时的用户名
+	Name                      string `json:"name" gorm:"name"`                                               // 集团名
+	Mobile                    string `json:"mobile" gorm:"mobile"`                                           // 联系人号码
+	AlertMobile               string `json:"alert_mobile" gorm:"alert_mobile"`                               // 离线通知号码
+	Linkman                   string `json:"linkman" gorm:"linkman"`                                         // 集团法人
+	Address                   string `json:"address" gorm:"address"`                                         // 集团地址
+	Email                     string `json:"email" gorm:"email"`                                             // 集团邮箱
+	CreateTime                int64  `json:"create_time" gorm:"create_time"`                                 // 新建集团时间
+	NameShow                  int8   `json:"name_show" gorm:"name_show"`                                     // 集团下车辆名优先显示模式\r\n1-车架号\r\n2-车牌号
+	SpeedLimit                int64  `json:"speed_limit" gorm:"speed_limit"`                                 // 超速阈值(单位km/h)
+	LongStopMin               int64  `json:"long_stop_min" gorm:"long_stop_min"`                             // 长时间停留告警时间最少时间(单位小时)
+	LongStopMax               int64  `json:"long_stop_max" gorm:"long_stop_max"`                             // 长时间停留告警时间最多时间(单位小时)
+	WirelessOfflineThreshold  int64  `json:"wireless_offline_threshold" gorm:"wireless_offline_threshold"`   // 无线设备离线阈值
+	WiredOfflineThreshold     int64  `json:"wired_offline_threshold" gorm:"wired_offline_threshold"`         // 有线设备离线阈值
+	EmergencyOfflineThreshold int64  `json:"emergency_offline_threshold" gorm:"emergency_offline_threshold"` // 紧急设备离线阈值
+	WiredHbi                  string `json:"wired_hbi" gorm:"wired_hbi"`                                     // 有线设备默认hbi
+	WirelessHbi               string `json:"wireless_hbi" gorm:"wireless_hbi"`                               // 无线设备默认hbi
+	MileageThreshold          string `json:"mileage_threshold" gorm:"mileage_threshold"`                     // 车辆里程限制。格式为 km/d 表示每多少天限制行驶多少公里
+	CarShow                   int64  `json:"car_show" gorm:"car_show"`                                       // 车辆显示方式 1:全部显示 2:选中显示
+	TrackDays                 int64  `json:"track_days" gorm:"track_days"`
+}
+
+// TableName 表名称
+func (*TCorp) TableName() string {
+	return "t_corp"
+}
+
+// TOperator 群组操作员列表
+type TOperator struct {
+	ID                 int64  `json:"id" gorm:"id"`
+	Oid                string `json:"oid" gorm:"oid"`           // 操作员帐号
+	Cid                string `json:"cid" gorm:"cid"`           // 集团唯一编号
+	Mobile             string `json:"mobile" gorm:"mobile"`     // 操作员手机号
+	Password           string `json:"password" gorm:"password"` // 登录密码
+	Name               string `json:"name" gorm:"name"`         // 操作员姓名
+	Email              string `json:"email" gorm:"email"`
+	Address            string `json:"address" gorm:"address"`
+	Creator            string `json:"creator" gorm:"creator"` // 账号创建者(通过admin平台用户创建)
+	CreateTime         int64  `json:"create_time" gorm:"create_time"`
+	Status             int64  `json:"status" gorm:"status"`                               // 操作员状态\n1-启用\n2-停用
+	Type               int64  `json:"type" gorm:"type"`                                   // 操作员类型\n1-集团管理员帐号\n2-集团监控员帐号\n3-集团子账号
+	Source             int64  `json:"source" gorm:"source"`                               // 用户来源：1=uweb.2=admin
+	Privilege          string `json:"privilege" gorm:"privilege"`                         // 子账号权限数据\n使用逗号隔开;\r\n\n1-车辆定位\r\n;2-车辆活动回放\r\n;3-车辆跟踪;\r\n4-提醒查询;\r\n5-设置紧急模式;\r\n6-显示设备;\r\n7-显示定位方式;\r\n8-控制GPS开关;\r\n默认都有1权限
+	AuthType           int64  `json:"auth_type" gorm:"auth_type"`                         // 子账号授权类型 0-部分授权 1-全部授权
+	OrgId              int64  `json:"org_id" gorm:"org_id"`                               // 车联网的组织id，由车联网通过接口维护
+	DeptId             int64  `json:"dept_id" gorm:"dept_id"`                             // 车联网的部门id，由车联网通过接口维护
+	Platform           int8   `json:"platform" gorm:"platform"`                           // 0:褀迹车管 1:租赁宝
+	LiveVideoTimeLimit int64  `json:"live_video_time_limit" gorm:"live_video_time_limit"` // 视频直播时长限制(秒)
+}
+
+// TableName 表名称
+func (*TOperator) TableName() string {
+	return "t_operator"
+}

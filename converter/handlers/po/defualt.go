@@ -213,11 +213,12 @@ type CarInfo struct {
 	VehicleColor       int
 	VehicleType        int
 	TransType          int
-	VehicleNationality string
+	VehicleNationality int
 	OwnersName         string
+	SN                 string
 }
 
-func NewCarInfo(vin string, vehicleColor, vehicleType, transType int, vehicleNationality, ownersName string) *CarInfo {
+func NewCarInfo(vin string, vehicleColor, vehicleType, transType int, vehicleNationality int, ownersName, sn string) *CarInfo {
 	carInfo := &CarInfo{
 		VIN:                vin,
 		VehicleColor:       vehicleColor,
@@ -225,6 +226,7 @@ func NewCarInfo(vin string, vehicleColor, vehicleType, transType int, vehicleNat
 		TransType:          transType,
 		VehicleNationality: vehicleNationality,
 		OwnersName:         ownersName,
+		SN:                 sn,
 	}
 	return carInfo
 }
@@ -235,8 +237,10 @@ func (c *CarInfo) Encode() []byte {
 	buffer.WriteString(fmt.Sprintf("VEHICLE_COLOR:=%d;", c.VehicleColor))
 	buffer.WriteString(fmt.Sprintf("VEHICLE_TYPE:=%d;", c.VehicleType))
 	buffer.WriteString(fmt.Sprintf("TRANS_TYPE:=%d;", c.TransType))
-	buffer.WriteString(fmt.Sprintf("VEHICLE_NATIONALITY:=%s;", c.VehicleNationality))
+	buffer.WriteString(fmt.Sprintf("VEHICLE_NATIONALITY:=%d;", c.VehicleNationality))
 	buffer.WriteString(fmt.Sprintf("OWNERS_NAME:=%s;", c.OwnersName))
+	buffer.WriteString(fmt.Sprintf("SN:=%s;", c.SN))
+
 	return buffer.Bytes()
 }
 
@@ -262,8 +266,9 @@ func (c *CarInfo) Decode(data []byte) *CarInfo {
 		parseInt(cls["vehicle_color"]),
 		parseInt(cls["vehicle_type"]),
 		parseInt(cls["trans_type"]),
-		cls["vehicle_nationality"].(string),
+		cls["vehicle_nationality"].(int),
 		cls["owers_name"].(string),
+		cls["sn"].(string),
 	)
 }
 
@@ -350,7 +355,7 @@ func (d *DownCtrlMsgText) Encode() []byte {
 	return buf.Bytes()
 }
 
-func (d DownCtrlMsgText) String() string {
+func (d *DownCtrlMsgText) String() string {
 	return fmt.Sprintf("%+v", d)
 }
 
@@ -546,4 +551,87 @@ func hexStringToBytes(s string) ([]byte, error) {
 
 func NormalStatus() int {
 	return terminal.Status.GPS + terminal.Status.LOCATED
+}
+
+type UpExgMsgRegister struct {
+	VehicleNo         string // 21 Octet String 车牌号
+	VehicleColor      byte   // 1 BYTE 车牌颜色
+	DataType          uint16 // 2 uint16_t 子业务类型标识
+	DataLength        uint32 // 4 uint32_t 后续数据长度
+	PlatformId        string // 11 BYTES 平台唯一编码
+	ProducerId        string // 11 BYTES 车载终端厂商唯一编码
+	TerminalModelType string // 8 BYTES 车载终端型号，不足8位时以“\0”终结
+	TerminalId        string // 7 BYTES 车载终端编号，大写字母和数字组成
+	TerminalSimcode   string // 20 Octet String 车载终端SIM卡电话号码。号码不足20位，则在前补充数字0
+	BrandModels       string // 100 Octet String 车辆品牌，车型，车牌颜色，车架号。不足100位，则在前补充数字0
+	FuncFlags         uint64 // 8 UINT64 设备特色功能标志位，可以表示64种功能
+}
+
+func NewUpExgMsgRegister(vehicleNo string, vehicleColor byte, dataType uint16, dataLength uint32,
+	devType string, sn string,
+	simCode string, brandModels string, funcFlags uint64) *UpExgMsgRegister {
+	return &UpExgMsgRegister{
+		VehicleNo:         vehicleNo,
+		VehicleColor:      vehicleColor,
+		DataType:          dataType,
+		DataLength:        dataLength,
+		PlatformId:        config.String("UPLINK.platformId"),
+		ProducerId:        config.String("UPLINK.producerId"),
+		TerminalModelType: devType,
+		TerminalId:        sn,
+		TerminalSimcode:   simCode,
+		BrandModels:       brandModels,
+		FuncFlags:         funcFlags,
+	}
+}
+
+// todo 待检查
+func (msg *UpExgMsgRegister) Encode() []byte {
+	vehicleNo := msg.VehicleNo
+	for len(vehicleNo) < 21 {
+		vehicleNo += "\x00"
+	}
+	platformID := msg.PlatformId
+	for len(platformID) < 11 {
+		platformID += "\x00"
+	}
+	producerID := msg.ProducerId
+	for len(producerID) < 11 {
+		producerID += "\x00"
+	}
+	terminalModelType := msg.TerminalModelType
+	for len(terminalModelType) < 8 {
+		terminalModelType += "\x00"
+	}
+	terminalID, _ := hex.DecodeString(msg.TerminalId)
+	for len(terminalID) < 7 {
+		terminalID = append(terminalID, 0x00)
+	}
+	terminalSimcode := msg.TerminalSimcode
+	for len(terminalSimcode) < 20 {
+		terminalSimcode = "0" + terminalSimcode
+	}
+	if len(terminalSimcode) > 20 {
+		terminalSimcode = terminalSimcode[len(terminalSimcode)-20:]
+	}
+	brandModels := msg.BrandModels
+	for len(brandModels) < 100 {
+		brandModels = "0" + brandModels
+	}
+	if len(brandModels) > 100 {
+		brandModels = brandModels[len(brandModels)-100:]
+	}
+	funcFlags := msg.FuncFlags
+	var funcFlagsBytes []byte
+	for i := 0; i < 8; i++ {
+		funcFlagsBytes = append(funcFlagsBytes, byte((funcFlags>>(8*i))&0xFF))
+	}
+	data := []byte(platformID + producerID + terminalModelType + string(terminalID) + terminalSimcode + brandModels + string(funcFlagsBytes))
+	dataLength := len(data)
+	dataLengthBytes := make([]byte, 4)
+	dataLengthBytes[0] = byte(dataLength >> 24)
+	dataLengthBytes[1] = byte((dataLength >> 16) & 0xFF)
+	dataLengthBytes[2] = byte((dataLength >> 8) & 0xFF)
+	dataLengthBytes[3] = byte(dataLength & 0xFF)
+	return []byte(vehicleNo + string(msg.VehicleColor) + fmt.Sprintf("%04x", msg.DataType) + string(dataLengthBytes) + string(data))
 }
