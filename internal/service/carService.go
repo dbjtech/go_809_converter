@@ -11,6 +11,8 @@ import (
 	"net/http"
 )
 
+var CarServiceObj *CarService
+
 type CarService struct {
 	ch *helpers.CarHelper
 }
@@ -54,8 +56,8 @@ func (cs *CarService) SwitchCarSettings(cnum string, sets string) int {
 	requestBody, _ := json.Marshal(requestData)
 	resp, err := http.Post("http://admin_url/downlink/terminal/control", "application/json", requestBody)
 	if err != nil {
-		logger.Println("Error sending request:", err)
-		return UCMTI_RESULT.FAILURE
+		log.Println("Error sending request:", err)
+		return ucmtiResult.FAILURE
 	}
 	defer resp.Body.Close()
 
@@ -63,24 +65,25 @@ func (cs *CarService) SwitchCarSettings(cnum string, sets string) int {
 		var responseData map[string]interface{}
 		err := json.NewDecoder(resp.Body).Decode(&responseData)
 		if err != nil {
-			logger.Println("Error decoding response:", err)
-			return UCMTI_RESULT.FAILURE
+			log.Println("Error decoding response:", err)
+			return ucmtiResult.FAILURE
 		}
 
 		if responseData["status"].(int) != 200 {
-			logger.Println("Control error:", responseData)
-			return UCMTI_RESULT.FAILURE
+			log.Println("Control error:", responseData)
+			return ucmtiResult.FAILURE
 		}
-		logger.Println("Control ok")
+		log.Println("Control ok")
 	} else {
-		logger.Println("Control HTTP error status code:", resp.StatusCode)
-		return UCMTI_RESULT.FAILURE
+		log.Println("Control HTTP error status code:", resp.StatusCode)
+		return ucmtiResult.FAILURE
 	}
 
-	return UCMTI_RESULT.SUCCESS
+	return ucmtiResult.SUCCESS
 }
 
-func (cs *CarService) LoadCarSettings(cnum string) (map[string]interface{}, error) {
+func (cs *CarService) LoadCarSettings(cnum string) map[string]interface{} {
+	panic("not implemented")
 	// Implement logic to load car settings by cnum
-	return nil, nil
+	return nil
 }

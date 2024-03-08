@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/peifengll/go_809_converter/converter/handlers"
 	"github.com/peifengll/go_809_converter/converter/handlers/po"
+	"github.com/peifengll/go_809_converter/internal/service"
 	"github.com/peifengll/go_809_converter/libs/constants/businessType"
 	"github.com/peifengll/go_809_converter/libs/constants/downConnectResp"
 	"github.com/peifengll/go_809_converter/libs/constants/ucmtiResult"
-	"github.com/peifengll/go_809_converter/libs/utils"
+	"github.com/peifengll/go_809_converter/libs/pack"
 	"log"
 	"net"
 	"time"
@@ -16,7 +17,7 @@ import (
 func DownLinkSocket() {
 	host := "0.0.0.0"
 	port := 8888
-	//config.String("UPLINK.localServerPort")
+	//config.String("UPLINK.localServerPort"]
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
@@ -52,13 +53,13 @@ func receiveDownLinkData(conn net.Conn) {
 		} else {
 			emptyDataCount = 0
 		}
-		message := utils.Unpack(data[:n])
+		message := pack.Unpack(data[:n])
 		if message == nil {
 			continue
 		}
 		log.Println(message)
 		// todo 这里还没进行类型断言，不晓得是啥玩意儿
-		down_link := utils.UnpackMsgBody(message)
+		down_link := pack.UnpackMsgBody(message)
 		if down_link == nil {
 			continue
 		}
@@ -91,15 +92,18 @@ func solveDownLogin(downLink any, conn net.Conn) {
 		result = downConnectResp.SUCCESS
 	}
 	loginresp := &po.DownLoginResp{Result: result}
-	packet := utils.BuildMessageP(businessType.DOWN_CONNECT_RSP, loginresp.Encode(), 0)
-	conn.Write(packet)
+	packet := pack.BuildMessageP(businessType.DOWN_CONNECT_RSP, loginresp.Encode(), 0)
+	_, err := conn.Write(packet)
+	if err != nil {
+		return
+	}
 	log.Printf("%v\n", loginresp)
 }
 
 func solveDownLogout(downLink any, conn net.Conn) {
 	time.Sleep(500 * time.Millisecond)
 	loginresp := &po.UpCloseLinkInform{0}
-	packet := utils.BuildMessageP(businessType.DOWN_DISCONNECT_REQ, loginresp.Encode(), 0)
+	packet := pack.BuildMessageP(businessType.DOWN_DISCONNECT_REQ, loginresp.Encode(), 0)
 	conn.Write(packet)
 	log.Printf("%v\n", loginresp)
 }
@@ -107,7 +111,64 @@ func solveDownLogout(downLink any, conn net.Conn) {
 func solveCtrlMsgTest(downLink any, conn net.Conn) {
 	settingStatus := ucmtiResult.FAILURE
 	v := downLink.(*po.DownCtrlMsgText)
-	msgContent := v.CtrlMsgText.MsgContent
+	msgId := v.CtrlMsgTextInfo.MsgSequence
+	msgContent := v.CtrlMsgTextInfo.MsgContent
 	cnum := v.VehicleNo
-	settingStatus=
+	settingStatus = service.CarServiceObj.SwitchCarSettings(cnum, msgContent)
+	ctrlResp := po.UpCtrlMsgTextAck{
+		VehicleNo:    cnum,
+		VehicleColor: v.VehicleColor,
+		DataType:     0,
+		DataLength:   0,
+		MsgID:        msgId,
+		Result:       byte(settingStatus),
+	}
+	packet := pack.BuildMessageP(businessType.UP_CTRL_MSG_TEXT_INFO_ACK, ctrlResp.Encode(), 0)
+	handlers.CsCenter.Uwriter.Write(packet)
+	log.Printf("%v\n", ctrlResp)
+}
+
+func solveCtrlMsg(downLink any, conn net.Conn) {
+	v := downLink.(*po.DownCtrlMsg)
+
+	msgContent := v.CtrlMsg
+	cnum := v.VehicleNo
+	msgId := msgContent["msg_id"]
+	cmd := msgContent["cmd"]
+	queryResult := map[string]any{
+		"msd_id": msgId,
+	}
+	if cmd == "" {
+		queryResult["err_msg"] = "no command"
+	}
+	if cmd != "query_fuel_cut" {
+		queryResult["err_msg"] = fmt.Sprintf("unkown command [%s]", cmd)
+	} else {
+		terminal_ := service.CarServiceObj.LoadCarSettings(cnum)
+		if terminal_ == nil || terminal_["fuel_cut_lock"] == "" {
+			queryResult["err_msg"] = fmt.Sprintf("terminal unsupport command [%s]", cmd)
+		} else {
+			fuelCutLock := terminal_["fuel_cut_lock"].(int)
+			if fuelCutLock&1 == 1 {
+				queryResult["wired_fuel_exp_status"] = terminal_["wired_fuel_exp_status"]
+				queryResult["wired_fuel_exe_status"] = terminal_["wired_fuel_exe_status"]
+				queryResult["wired_fuel_status"] = terminal_["wired_fuel_status"]
+			} else if fuelCutLock&2 == 2 {
+				queryResult["dormant_fuel_exp_status"] = terminal_["dormant_fuel_exp_status"]
+				queryResult["dormant_fuel_exe_status"] = terminal_["dormant_fuel_exe_status"]
+				queryResult["dormant_fuel_status"] = terminal_["dormant_fuel_status"]
+			}
+		}
+	}
+	ctrlResp := po.UpCtrlMsgAck{
+		VehicleNo:    cnum,
+		VehicleColor: v.VehicleColor,
+		DataType:     0,
+		DataLength:   0,
+		Data:         queryResult,
+	}
+
+	packet := pack.BuildMessageP(businessType.UP_CTRL_MSG, ctrlResp.Encode(), 0)
+	handlers.CsCenter.Uwriter.Write(packet)
+	log.Printf("%#v", ctrlResp)
 }

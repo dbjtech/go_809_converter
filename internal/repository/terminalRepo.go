@@ -8,15 +8,27 @@ import (
 	"log"
 )
 
-type TerminalRepo struct {
+type TerminalRepo interface {
+	GetTidBy808Sn(sn808 string) string
+	GetTerminalExtendByTid(tid string) *model.TTerminalExtend
+	GetTerminalByTid(tid string) *model.TTerminalInfo
+	GetTerminalBySN(sn string) *model.TTerminalInfo
+	GetWorkStatusBySn(sn string) *model.TTerminalInfo
+	GetCarAndTermBySn(sn string) *model.CarAndTerminal
+	GetCarStatusBySn(sn string) *model.CarStatus
+	RecordEventHistory(sn, name, remark, locateErrorInfo string, eventType int16) error
+	ExeStatus(code int) (int, bool)
+}
+
+type terminalRepo struct {
 	db *gorm.DB
 }
 
-func NewTerminalRepo(db *gorm.DB) *TerminalRepo {
-	return &TerminalRepo{db: db}
+func NewTerminalRepo(db *gorm.DB) TerminalRepo {
+	return &terminalRepo{db: db}
 }
 
-func (r *TerminalRepo) GetTidBy808Sn(sn808 string) string {
+func (r *terminalRepo) GetTidBy808Sn(sn808 string) string {
 	var terminal model.TTerminalInfo
 	if err := r.db.Table("t_terminal_info").Select("t_terminal_info.tid").
 		Joins("JOIN t_808_sn ON t_terminal_info.sn = t_808_sn.sn").
@@ -26,7 +38,7 @@ func (r *TerminalRepo) GetTidBy808Sn(sn808 string) string {
 	}
 	return ""
 }
-func (r *TerminalRepo) GetTerminalExtendByTid(tid string) *model.TTerminalExtend {
+func (r *terminalRepo) GetTerminalExtendByTid(tid string) *model.TTerminalExtend {
 	var terminalExtend model.TTerminalExtend
 	if err := r.db.Select("tid,producer_id, terminal_version, terminal_id, vehicle_identification_number").Where("tid = ?", tid).First(&terminalExtend).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -37,7 +49,7 @@ func (r *TerminalRepo) GetTerminalExtendByTid(tid string) *model.TTerminalExtend
 	}
 	return &terminalExtend
 }
-func (r *TerminalRepo) GetTerminalByTid(tid string) *model.TTerminalInfo {
+func (r *terminalRepo) GetTerminalByTid(tid string) *model.TTerminalInfo {
 	terminal := model.TTerminalInfo{}
 	err := r.db.Model(&terminal).
 		Where("tid = ?", tid).
@@ -53,7 +65,7 @@ func (r *TerminalRepo) GetTerminalByTid(tid string) *model.TTerminalInfo {
 	}
 	return &terminal
 }
-func (r *TerminalRepo) GetTerminalBySN(sn string) *model.TTerminalInfo {
+func (r *terminalRepo) GetTerminalBySN(sn string) *model.TTerminalInfo {
 	terminal := model.TTerminalInfo{}
 	err := r.db.Model(&terminal).
 		Where("sn = ?", sn).
@@ -69,7 +81,7 @@ func (r *TerminalRepo) GetTerminalBySN(sn string) *model.TTerminalInfo {
 
 	return &terminal
 }
-func (r *TerminalRepo) GetWorkStatusBySn(sn string) *model.TTerminalInfo {
+func (r *terminalRepo) GetWorkStatusBySn(sn string) *model.TTerminalInfo {
 	t := model.TTerminalInfo{}
 	if err := r.db.Model(&t).Where("sn = ?", sn).
 		Select("id,tid,status,gsm,temp,gps,last_pkt_time").
@@ -81,7 +93,7 @@ func (r *TerminalRepo) GetWorkStatusBySn(sn string) *model.TTerminalInfo {
 	}
 	return &t
 }
-func (r *TerminalRepo) GetCarAndTermBySn(sn string) *model.CarAndTerminal {
+func (r *terminalRepo) GetCarAndTermBySn(sn string) *model.CarAndTerminal {
 	terminalAndCar := model.CarAndTerminal{}
 
 	err := r.db.Table("t_terminal_info as T").
@@ -99,7 +111,7 @@ func (r *TerminalRepo) GetCarAndTermBySn(sn string) *model.CarAndTerminal {
 	return &terminalAndCar
 }
 
-func (r *TerminalRepo) GetCarStatusBySn(sn string) *model.CarStatus {
+func (r *terminalRepo) GetCarStatusBySn(sn string) *model.CarStatus {
 	carStatus := model.CarStatus{}
 	err := r.db.Table("t_terminal_info as t").
 		Select("t.id,t.tid,t.status,c.car_id,t.gps_lid,c.vin,c.cnum,c.id as t_car_id,t.gps,t.last_pkt_time,t.last_position_type").
@@ -116,11 +128,11 @@ func (r *TerminalRepo) GetCarStatusBySn(sn string) *model.CarStatus {
 	return &carStatus
 }
 
-func (r *TerminalRepo) RecordEventHistory(sn, name, remark, locateErrorInfo string, eventType int16) error {
+func (r *terminalRepo) RecordEventHistory(sn, name, remark, locateErrorInfo string, eventType int16) error {
 	panic("not  implemented")
 }
 
-func (r *TerminalRepo) ExeStatus(code int) (int, bool) {
+func (r *terminalRepo) ExeStatus(code int) (int, bool) {
 	if code == terminal.TerminalExe.SUCCESS {
 		return terminal.SwitchStatus["worked"], true
 	}

@@ -256,11 +256,11 @@ func downCtrlMsgTextInfoUnpacker(body []byte) any {
 	ctrlMsgTextInfo := ctrlMsgTextInfoUnpacker(data).(*po.CtrlMsgTextInfo)
 
 	msg := &po.DownCtrlMsgText{
-		VehicleNo:    vehicleNo,
-		VehicleColor: vehicleColor,
-		DataType:     dataType,
-		DataLength:   dataLength,
-		CtrlMsgText:  ctrlMsgTextInfo,
+		VehicleNo:       vehicleNo,
+		VehicleColor:    vehicleColor,
+		DataType:        dataType,
+		DataLength:      dataLength,
+		CtrlMsgTextInfo: ctrlMsgTextInfo,
 	}
 
 	return msg

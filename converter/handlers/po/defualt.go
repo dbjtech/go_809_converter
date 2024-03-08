@@ -333,17 +333,17 @@ func (c *CtrlMsgTextInfo) Encode() []byte {
 }
 
 type DownCtrlMsgText struct {
-	VehicleNo    string
-	VehicleColor byte
-	DataType     uint16
-	DataLength   uint32
-	CtrlMsgText  *CtrlMsgTextInfo
+	VehicleNo       string
+	VehicleColor    byte
+	DataType        uint16
+	DataLength      uint32
+	CtrlMsgTextInfo *CtrlMsgTextInfo
 }
 
 func (d *DownCtrlMsgText) Encode() []byte {
 	vehicleNo := []byte(d.VehicleNo)
 	vehicleNo = append(vehicleNo, bytes.Repeat([]byte{0}, 21-len(vehicleNo))...)
-	data := d.CtrlMsgText.Encode()
+	data := d.CtrlMsgTextInfo.Encode()
 	d.DataLength = uint32(len(data))
 
 	buf := new(bytes.Buffer)
@@ -383,7 +383,7 @@ func (u *UpCtrlMsgTextAck) Encode() []byte {
 }
 
 // String 方法用于返回结构体的字符串表示
-func (u UpCtrlMsgTextAck) String() string {
+func (u *UpCtrlMsgTextAck) String() string {
 	return fmt.Sprintf("%+v", u)
 }
 
@@ -393,7 +393,7 @@ type DownCtrlMsg struct {
 	VehicleColor byte
 	DataType     uint16
 	DataLength   uint32
-	CtrlMsg      []byte
+	CtrlMsg      map[string]string
 }
 
 // Encode 方法用于编码下行控制消息
@@ -410,7 +410,7 @@ func (d *DownCtrlMsg) Encode() []byte {
 }
 
 // String 方法用于返回结构体的字符串表示
-func (d DownCtrlMsg) String() string {
+func (d *DownCtrlMsg) String() string {
 	return fmt.Sprintf("%+v", d)
 }
 
@@ -477,7 +477,7 @@ type UpCtrlMsgAck struct {
 	VehicleColor byte
 	DataType     uint16
 	DataLength   uint32
-	Data         []byte
+	Data         map[string]any
 }
 
 // Encode 方法用于编码上行控制消息应答
@@ -497,7 +497,7 @@ func (u *UpCtrlMsgAck) Encode() []byte {
 }
 
 // String 方法用于返回结构体的字符串表示
-func (u UpCtrlMsgAck) String() string {
+func (u *UpCtrlMsgAck) String() string {
 	return fmt.Sprintf("%+v", u)
 }
 

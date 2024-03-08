@@ -356,3 +356,34 @@ type TOperator struct {
 func (*TOperator) TableName() string {
 	return "t_operator"
 }
+
+// TLocation 位置信息。
+type TLocation struct {
+	ID          int64   `json:"id" gorm:"id"`
+	CarId       string  `json:"car_id" gorm:"car_id"`
+	Tid         string  `json:"tid" gorm:"tid"`                   // 车辆终端序列号
+	Category    int8    `json:"category" gorm:"category"`         // 1: 移动点\r\n2: 停留点\r\n3: 实时位置更新告警(预留)\r\n4：震动告警(预留)\r\n5：低电告警\r\n6： 满电告警\r\n7： 断电告警\r\n8：低燃油告警(预留)\r\n9：高水温告警(预留)\r\n10：OBD断开告警(预留)\r\n11：电门锁开启(预留)\r\n12: 自检异常
+	Latitude    int64   `json:"latitude" gorm:"latitude"`         // 纬度
+	Longitude   int64   `json:"longitude" gorm:"longitude"`       // 经度
+	Clatitude   int64   `json:"clatitude" gorm:"clatitude"`       // 加密后的纬度
+	Clongitude  int64   `json:"clongitude" gorm:"clongitude"`     // 加密后的经度
+	Address     string  `json:"address" gorm:"address"`           // 地点名称
+	Altitude    int64   `json:"altitude" gorm:"altitude"`         // 高度
+	Speed       int64   `json:"speed" gorm:"speed"`               // 当前时速度。km/h. int, 同 max_speed
+	Degree      float32 `json:"degree" gorm:"degree"`             // 方位角
+	LocateError int64   `json:"locate_error" gorm:"locate_error"` // 定位误差。单位：米\r\ngps；误差20米\r\n基站定位误差：2公里
+	Snr         int64   `json:"snr" gorm:"snr"`                   // GPS载噪比
+	Mcc         string  `json:"mcc" gorm:"mcc"`                   // 基站信息mcc
+	Mnc         string  `json:"mnc" gorm:"mnc"`                   // 基站信息mnc
+	Lac         string  `json:"lac" gorm:"lac"`                   // 基站信息lac
+	CellId      string  `json:"cell_id" gorm:"cell_id"`           // 基站信息
+	Timestamp   int64   `json:"timestamp" gorm:"timestamp"`       // GPS定位时间
+	TType       string  `json:"t_type" gorm:"t_type"`             // 终端类型 ZJ210,ZJ211,ZJ300
+	LocateType  int64   `json:"locate_type" gorm:"locate_type"`   // 0:基站定位，1:gps定位
+	Rxlev       int64   `json:"rxlev" gorm:"rxlev"`               // 接收基站信号强度
+}
+
+// TableName 表名称
+func (*TLocation) TableName() string {
+	return "t_location"
+}

@@ -8,7 +8,7 @@ import (
 
 // TerminalService 结构
 type TerminalService struct {
-	repo *repository.TerminalRepo
+	repo repository.TerminalRepo
 }
 
 func (t *TerminalService) GetTerminalByTid(tid string) *model.TTerminalInfo {

@@ -2,25 +2,25 @@ package senders
 
 import (
 	"github.com/gookit/config/v2"
-	"github.com/gorilla/websocket"
 	"github.com/peifengll/go_809_converter/converter/handlers"
 	"github.com/peifengll/go_809_converter/converter/handlers/po"
 	"github.com/peifengll/go_809_converter/libs/constants/businessType"
 	"github.com/peifengll/go_809_converter/libs/constants/upConnectResp"
-	"github.com/peifengll/go_809_converter/libs/utils"
+	"github.com/peifengll/go_809_converter/libs/pack"
 	"log"
+	"net"
 	"time"
 )
 
 const BUFSIZE = 10240
 
 type UpLinkWriter struct {
-	Writer      *websocket.Conn // 当然我即可以读，也可以写下
+	Writer      net.Conn // 当然我即可以读，也可以写下
 	LastWriteAt int64
 	HbInterval  int64
 }
 
-func NewUpLinkWriter(conn *websocket.Conn) *UpLinkWriter {
+func NewUpLinkWriter(conn net.Conn) *UpLinkWriter {
 	return &UpLinkWriter{
 		Writer:      conn,
 		LastWriteAt: 0,
@@ -29,7 +29,10 @@ func NewUpLinkWriter(conn *websocket.Conn) *UpLinkWriter {
 }
 func (u *UpLinkWriter) Write(b []byte) {
 	// todo 我默认都写的testmessage，也有可能需要改为二进制的数据，看后边问问
-	u.Writer.WriteMessage(websocket.BinaryMessage, b)
+	_, err := u.Writer.Write(b)
+	if err != nil {
+		return
+	}
 }
 
 func (u *UpLinkWriter) IsHbTime() bool {
@@ -42,10 +45,6 @@ func (u *UpLinkWriter) IsHbTime() bool {
 
 func (u *UpLinkWriter) Update() {
 	u.LastWriteAt = time.Now().Unix()
-}
-
-func (u *UpLinkWriter) WriteLines(data []byte) {
-	u.Writer.WriteMessage(websocket.TextMessage, data)
 }
 
 func (u *UpLinkWriter) Close(data []byte) {
@@ -64,7 +63,7 @@ func Uplink() {
 }
 
 // Login todo 待测试
-func Login(conn *websocket.Conn) []byte {
+func Login(conn net.Conn) []byte {
 	userId := config.Int("UPLINK.platformUserId")
 	password := config.String("UPLINK.platformPassword")
 	myHost := config.String("UPLINK.localServerIp")
@@ -75,24 +74,26 @@ func Login(conn *websocket.Conn) []byte {
 		DownLinkIP:   myHost,
 		DownLinkPort: myPort,
 	}
-	packet := utils.BuildMessageP(businessType.UP_CONNECT_REQ, loginInfo.Encode(), 0)
-	err := conn.WriteMessage(websocket.TextMessage, packet)
+	packet := pack.BuildMessageP(businessType.UP_CONNECT_REQ, loginInfo.Encode(), 0)
+	_, err := conn.Write(packet)
 	if err != nil {
 		log.Println(err)
 	}
-	_, data, err := conn.ReadMessage()
+	var buf [10000]byte
+	n, err := conn.Read(buf[:])
 	if err != nil {
 		log.Println(err)
 	}
 
-	return data
+	return buf[:n]
 }
 
 func getUplinkConnection(host, port string) int {
-	socketUrl := "ws://" + host + ":" + port
+	socketUrl := host + ":" + port
 	timeoutCounter := 0
 	//连接到服务端
-	conn, _, err := websocket.DefaultDialer.Dial(socketUrl, nil)
+
+	conn, err := net.Dial("tcp", socketUrl)
 	if err != nil {
 		//等待2s
 		time.Sleep(2 * time.Second)
@@ -113,14 +114,14 @@ func getUplinkConnection(host, port string) int {
 		conn.Close()
 		return 0
 	}
-	message := utils.Unpack(loginResult)
+	message := pack.Unpack(loginResult)
 	if message != nil {
 		encryptflag := message.Header.Crypto
 		msgbody := message.Body
 		if encryptflag != 0 {
-			msgbody = utils.Encrypt(message.Header.Key, msgbody)
+			msgbody = po.Encrypt(message.Header.Key, msgbody)
 		}
-		uploginresp := utils.UpLoginRespUnpacker(msgbody)
+		uploginresp := pack.UpLoginRespUnpacker(msgbody)
 		if uploginresp == nil {
 			return 0
 		}
@@ -162,7 +163,7 @@ func getUplinkConnection(host, port string) int {
 
 func heartBeat(ulwriter *UpLinkWriter) {
 	body := po.EmptyBody{}
-	packet := utils.BuildMessageP(businessType.UP_LINKTEST_REQ,
+	packet := pack.BuildMessageP(businessType.UP_LINKTEST_REQ,
 		body.Encode(), 0)
 	log.Println("TO UP LINK HEART BEAT")
 	ulwriter.Write(packet)
@@ -172,7 +173,7 @@ func disconnectUplink(ulwriter *UpLinkWriter) {
 	userId := config.Int("UPLINK.platformUserId")
 	password := config.String("UPLINK.platformPassword")
 	body := po.UpDisconnectReq{UserID: userId, Password: password}
-	packet := utils.BuildMessageP(businessType.UP_DISCONNECT_REQ,
+	packet := pack.BuildMessageP(businessType.UP_DISCONNECT_REQ,
 		body.Encode(), 0)
 	log.Println(body)
 	ulwriter.Write(packet)
@@ -180,14 +181,16 @@ func disconnectUplink(ulwriter *UpLinkWriter) {
 
 func acceptUpLinkConsole(conn *UpLinkWriter) (res int) {
 	//ch := make(chan struct{})
+	var buf [100000]byte
 	go func() {
 		// todo 这里可能有点大问题，等后边能跑了之后再来看看
-		_, data, err := conn.Writer.ReadMessage()
-		if data == nil || len(data) == 0 || err != nil {
+
+		n, err := conn.Writer.Read(buf[:])
+		if n == 0 || err != nil {
 			res = -1
 			return
 		}
-		dealUpLinkConsole(conn, data)
+		dealUpLinkConsole(conn, buf[:n])
 		//ch <- struct{}{}
 	}()
 	select {
@@ -200,12 +203,12 @@ func acceptUpLinkConsole(conn *UpLinkWriter) (res int) {
 }
 
 func dealUpLinkConsole(conn *UpLinkWriter, data []byte) {
-	message := utils.Unpack(data)
+	message := pack.Unpack(data)
 	log.Println(message)
 	if message != nil {
 		if message.Header.Type == businessType.UP_CONNECT_RSP {
 			// todo 这一截有点大问题，压根不晓得是啥子类型，就用了原本的那种方式
-			upresp := utils.UnpackMsgBody(message)
+			upresp := pack.UnpackMsgBody(message)
 			log.Println(upresp.(po.UpLoginResp))
 			conn.Update()
 		} else if message.Header.Type == businessType.UP_LINKTEST_RSP {
