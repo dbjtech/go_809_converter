@@ -3,8 +3,8 @@ module github.com/peifengll/go_809_converter
 go 1.21.4
 
 require (
+	github.com/google/wire v0.6.0
 	github.com/gookit/config/v2 v2.2.5
-	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/redis/go-redis/v9 v9.4.0
 	github.com/tidwall/gjson v1.17.1
@@ -30,7 +30,6 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/term v0.16.0 // indirect

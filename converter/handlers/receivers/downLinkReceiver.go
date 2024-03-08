@@ -65,6 +65,7 @@ func receiveDownLinkData(conn net.Conn) {
 		}
 		solveDownLink(message.Header.Type, down_link, conn)
 	}
+	log.Println("STOP LISTEN Downlink Port")
 }
 
 func solveDownLink(messageType int, downLink any, conn net.Conn) {
@@ -76,9 +77,10 @@ func solveDownLink(messageType int, downLink any, conn net.Conn) {
 	case businessType.DOWN_CONNECT_REQ:
 		solveDownLogin(downLink, conn)
 	case businessType.DOWN_CTRL_MSG_TEXT_INFO:
-
+		solveCtrlMsgTest(downLink, conn)
 	case businessType.DOWN_CTRL_MSG:
-
+		solveCtrlMsg(downLink, conn)
+	default:
 	}
 
 }

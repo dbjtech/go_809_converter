@@ -8,13 +8,13 @@ import (
 	"log"
 )
 
-type OnlineOfflineConverter struct {
-	*BaseConverter
+type onlineOfflineConverter struct {
+	*baseConverter
 	carService      *service.CarService
 	terminalService *service.TerminalService
 }
 
-func (c *OnlineOfflineConverter) Convert(item string) []byte {
+func (c *onlineOfflineConverter) Convert(item string) []byte {
 	/*
 		S10 offline online info
 

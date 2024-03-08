@@ -20,14 +20,14 @@ import (
 	"strconv"
 )
 
-type LocationConverter struct {
-	*BaseConverter
+type locationConverter struct {
+	*baseConverter
 	carIdWhitelist  *utils.CarIdWhitelist
 	carService      *service.CarService
 	terminalService *service.TerminalService
 }
 
-func (c *LocationConverter) Convert(item string) []byte {
+func (c *locationConverter) Convert(item string) []byte {
 	locations := gjson.Get(item, "res.location")
 	length := int(locations.Get("#").Int())
 	var carInfo *model.TCar = nil
@@ -146,7 +146,7 @@ func (c *LocationConverter) Convert(item string) []byte {
 	return packet
 }
 
-func (c *LocationConverter) getTermianlStatus(ter *model.TTerminalInfo) int {
+func (c *locationConverter) getTermianlStatus(ter *model.TTerminalInfo) int {
 	termStatus := 0
 	if ter == nil {
 		return termStatus
@@ -161,7 +161,7 @@ func (c *LocationConverter) getTermianlStatus(ter *model.TTerminalInfo) int {
 	return termStatus
 }
 
-func (c *LocationConverter) getTermianlAlarm(ter *model.TTerminalInfo) int {
+func (c *locationConverter) getTermianlAlarm(ter *model.TTerminalInfo) int {
 	termAlarm := 0
 	if ter == nil {
 		return 0
@@ -181,7 +181,7 @@ func (c *LocationConverter) getTermianlAlarm(ter *model.TTerminalInfo) int {
 	return termAlarm
 }
 
-func (c *LocationConverter) longStopCheck(tid string) int {
+func (c *locationConverter) longStopCheck(tid string) int {
 	longStopKey := helpers.RedisKeyHelper.GetEventLongStopPushedKey(tid)
 	longStopTimes, err := c.redis.Get(context.Background(), longStopKey).Result()
 	if err != nil {
@@ -206,6 +206,6 @@ func (c *LocationConverter) longStopCheck(tid string) int {
 
 }
 
-func (c *LocationConverter) sendLongStop(longStopStatus int, cnum string, color int) []byte {
+func (c *locationConverter) sendLongStop(longStopStatus int, cnum string, color int) []byte {
 	return c.BuildUpWarnExtends(longStopStatus, cnum, byte(color), "")
 }

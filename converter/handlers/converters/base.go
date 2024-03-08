@@ -10,36 +10,36 @@ import (
 	"log"
 )
 
-type BaseConverter struct {
+type baseConverter struct {
 	dB      *gorm.DB
 	redis   *redis.Client
 	TraceID string
 }
 
-func NewBaseConverter(db *gorm.DB) *BaseConverter {
-	return &BaseConverter{
+func NewBaseConverter(db *gorm.DB) *baseConverter {
+	return &baseConverter{
 		dB: db,
 	}
 }
 
-func (c *BaseConverter) Convert(item string) []byte {
+func (c *baseConverter) Convert(item string) []byte {
 	log.Println(fmt.Errorf("Convert method is not implemented"))
 	return nil
 }
 
-func (c *BaseConverter) Handle(item string) []byte {
+func (c *baseConverter) Handle(item string) []byte {
 	return c.Convert(item)
 }
 
-func (c *BaseConverter) SetTraceID(traceID string) {
+func (c *baseConverter) SetTraceID(traceID string) {
 	c.TraceID = traceID
 }
 
-func (c *BaseConverter) GetTraceID() string {
+func (c *baseConverter) GetTraceID() string {
 	return c.TraceID
 }
 
-func (c *BaseConverter) BuildUpWarnExtends(warnCode int, cnum string, color byte, sn string) []byte {
+func (c *baseConverter) BuildUpWarnExtends(warnCode int, cnum string, color byte, sn string) []byte {
 	btype := businessType.UP_WARN_MSG_EXTENDS
 	var data string
 	if sn != "" {

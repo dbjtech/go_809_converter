@@ -10,12 +10,12 @@ import (
 	"log"
 )
 
-type CarExtraInfoConverter struct {
-	*BaseConverter
+type carExtraInfoConverter struct {
+	*baseConverter
 	carService *service.CarService
 }
 
-func (c *CarExtraInfoConverter) Convert(item string) []byte {
+func (c *carExtraInfoConverter) Convert(item string) []byte {
 	carId := gjson.Get("res.car_id", item).String()
 	sn := gjson.Get("res.sn", item).String()
 	concentration := gjson.Get("res.concentration", item).Int()

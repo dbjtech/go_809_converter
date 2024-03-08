@@ -10,12 +10,12 @@ import (
 	"strconv"
 )
 
-type CarInfoConverter struct {
-	*BaseConverter
-	corpHelper helpers.CorpHelper
+type carInfoConverter struct {
+	*baseConverter
+	corpHelper *helpers.CorpHelper
 }
 
-func (c *CarInfoConverter) Convert(item string) []byte {
+func (c *carInfoConverter) Convert(item string) []byte {
 	/*
 		S99 binding info
 		{

@@ -10,11 +10,11 @@ import (
 	"strconv"
 )
 
-type CarRegisterConverter struct {
-	*BaseConverter
+type carRegisterConverter struct {
+	*baseConverter
 }
 
-func (c *CarRegisterConverter) Convert(item string) []byte {
+func (c *carRegisterConverter) Convert(item string) []byte {
 	/*
 		S99 binding info
 		{

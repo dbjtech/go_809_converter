@@ -9,3 +9,15 @@ type distributor struct {
 	Db    *gorm.DB
 	Redis *redis.Client
 }
+
+func (d *distributor) Handle() {
+
+}
+
+func (d *distributor) UplinkSend() {
+
+}
+
+func (d *distributor) GetPacketType() {
+
+}
