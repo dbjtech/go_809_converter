@@ -1,0 +1,28 @@
+FROM registry.cn-qingdao.aliyuncs.com/dbjtech/qjcg:lsm_github_token AS token
+FROM registry.cn-qingdao.aliyuncs.com/from_docker_hub/golang:1.23-alpine AS build
+# Dockerfile 是基于此镜像构建的。此文件应只用于构建不能运行
+# 应该使用 docker build -t registry.cn-qingdao.aliyuncs.com/dbjtech/go-809-converter:go_ent -f Dockerfile_base . 命令编译
+# 编译后push到阿里云或者直接在阿里云上编译
+
+ENV GO111MODULE=on
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOPRIVATE="github.com/dbjtech/*,github.com/linketech/*"
+# 下面的 环境变量必须加，否则go mod 会报 terminal prompts disabled 的错
+ENV GIT_TERMINAL_PROMPT=1
+ENV GOOS=linux
+ENV GOARCH=amd64
+
+WORKDIR /go/src
+
+ADD go.mod .
+
+COPY --from=token /tmp/GithubUsername /gu
+COPY --from=token /tmp/GithubToken /gt
+RUN export gitUser=$(cat /gu) \
+    && export gitToken=$(cat /gt) \
+    && echo "$gitUser check" \
+    && echo "http://mirrors.aliyun.com/alpine/v3.20/main/" > /etc/apk/repositories \
+    && apk add git \
+    && git config --global url."https://$gitUser:$gitToken@github.com".insteadOf "https://github.com" \
+    && go mod download
+

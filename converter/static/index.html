@@ -1,0 +1,444 @@
+<!--
+ * @Author: SimingLiu siming.liu@dbjtech.com
+ * @Date: 2024-10-29 09:27:22
+ * @LastEditors: SimingLiu siming.liu@dbjtech.com
+ * @LastEditTime: 2024-10-29 14:13:08
+ * @FilePath: \go_809_converter\converter\static\index.html
+ * @Description: 
+ * 
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>809协议转换工具管理页面</title>
+    <link rel="icon" href="data:,">
+    <style>
+        input[type=radio] {
+            margin-right: 0;
+        }
+
+        textarea:focus {
+            border-color: green;
+            outline: none;
+        }
+
+        .tab {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .tips {
+            color: gray;
+            font-size: 12px;
+        }
+
+        #deviceListContainer {
+            position: relative;
+            width: 740px;
+        }
+
+        #deviceList,
+        #deviceListLineNumbers,
+        #slides,
+        .bg_line {
+            display: block;
+            font-family: monospace;
+        }
+
+        #deviceList {
+            width: 700px;
+            height: 600px;
+            /* 减去行号列的宽度 */
+            padding-left: 40px;
+            /*避免被覆盖*/
+            word-wrap: normal;
+            overflow-x: hidden;
+            white-space: pre;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+            background-color: transparent;
+            position: absolute;
+            top: 0px;
+        }
+
+        .row_0 {
+            background-color: #f0f0f0;
+            color: #f0f0f0;
+        }
+
+        .row_1 {
+            background-color: #cdd0df;
+            color: #cdd0df;
+        }
+
+        .row_2 {
+            background-color: #c5c5c5;
+            color: #c5c5c5;
+        }
+
+        #deviceListLineNumbers {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            width: 30px;
+            background-color: #f0f0f0;
+            text-align: right;
+            padding-right: 5px;
+            padding-top: 3px;
+            overflow: hidden;
+            scroll-behavior: auto;
+            resize: none;
+        }
+
+        #slides {
+            position: absolute;
+            top: 1px;
+            right: 1px;
+            max-width: 190px;
+            background-color: transparent;
+            text-align: left;
+            padding-right: 5px;
+            padding-top: 2px;
+            overflow: hidden;
+            scroll-behavior: auto;
+            resize: none;
+            word-wrap: normal;
+            white-space: pre;
+            text-overflow: ellipsis;
+        }
+
+        #toolbar {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="tabs">
+        <div class="tab active" data-tab="cacheManager">缓存管理</div>
+        <div class="tab" data-tab="pushHistoryQuery">推送历史查询</div>
+    </div>
+
+    <div id="cacheManager" class="content active">
+        <span>&nbsp;&nbsp;&nbsp;缓存来源 :</span>
+        <input type="radio" id="cacheFromVin" name="cacheFrom" value="vin" checked />
+        <label for="cacheFromVin">车架号</label>
+        <input type="radio" id="cacheFromCnum" name="cacheFrom" value="cnum" />
+        <label for="cacheFromCnum">车牌号</label>
+        <input type="radio" id="cacheFromSN" name="cacheFrom" value="sn" />
+        <label for="cacheFromSN">设备SN</label>
+        <input type="radio" id="cacheFromID" name="cacheFrom" value="id" />
+        <label for="cacheFromID">车辆或设备的id</label>
+        <div class="tips">请输入车辆或设备信息，每行填写一辆车或一个设备</div>
+        <div id="deviceListContainer">
+            <div id="dl_bg"></div>
+            <textarea id="deviceList" name="deviceList"></textarea>
+            <div id="deviceListLineNumbers"></div>
+            <div id="slides"></div>
+        </div>
+        <div id="toolbar">
+            <button type="button" id="removeCache">清除缓存</button>
+            <button type="button" id="queryCache">查询缓存</button>
+            <label for="queryTimeOut">超时时间(s):</label>
+            <input type="number" id="queryTimeOut" name="queryTimeOut" value="30" />
+        </div>
+        <div id="cacheMsg">
+        </div>
+    </div>
+
+    <div id="pushHistoryQuery" class="content">
+        <div>
+            <input type="search">
+        </div>
+    </div>
+
+
+    <script src="jquery-3.7.1.min.js"></script>
+    <script>
+        const options = { timeZone: 'Asia/Shanghai', hour12: false };
+        // baseUrl = "http://127.0.0.28:9202";
+        baseUrl = window.location.protocol + "//" + window.location.host + "/api/cvt809/v1";
+        $(document).ready(function () {
+            $('.tab').click(function () {
+                const tabId = $(this).attr('data-tab');
+                $('.tab').removeClass('active');
+                $('.content').removeClass('active');
+                $(this).addClass('active');
+                $('#' + tabId).addClass('active')
+                trigger_tab(tabId);
+            });
+            setCachePlaceHolder();
+            lineNumberListener();
+            cacheBusiness();
+        });
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function timeFormatter(cell, formatterParams, onRendered) {
+            let timestamp = cell.getValue();
+            if (timestamp === null || typeof (timestamp) === "undefined") {
+                return "-"
+            }
+            if (timestamp === 0) {
+                return ""
+            }
+            timestamp = parseInt(timestamp);
+            let objD = new Date(timestamp * 1000);
+            let rough = objD.toLocaleString("zh", options);
+            return rough.replace(/[^\d \/ :]+/g, " ");
+        }
+
+        function trigger_tab(tabId) {
+            switch (tabId) {
+                case "cacheManager":
+                    break;
+                case "pushHistoryQuery":
+                    break;
+            }
+        }
+
+
+        function lineNumberListener() {
+            var $codeArea = $('#deviceList');
+            var $lineNumbers = $('#deviceListLineNumbers');
+            var $slides = $('#slides');
+            var $dl_bg = $('#dl_bg');
+            var $container = $('#deviceListContainer');
+            $lineNumbers.height($codeArea.height());
+            $slides.height($codeArea.height());
+            $dl_bg.height($codeArea.height() + 3);
+            $dl_bg.css("overflow-y", "hidden");
+            $dl_bg.css("padding-top", "3px");
+            $dl_bg.width($codeArea.width() + 20);
+            var line_should_height = $lineNumbers.css("font-size");
+            var bg_max_scroll = 10 * (parseInt(line_should_height))
+
+            function updateLineNumbers() {
+                var lines = $codeArea.val().split('\n').length;
+                var numbers = '';
+                for (var i = 1; i <= lines; i++) {
+                    numbers += '<div>' + i + '</div>';
+                }
+                $lineNumbers.html(numbers);
+                // 同步滚动
+                let scrollHeight = $codeArea.scrollTop();
+                $lineNumbers.scrollTop(scrollHeight);
+                $slides.empty();
+            }
+
+            // 初始化行号
+            updateLineNumbers();
+
+            // 监听textarea变化
+            $codeArea.on('input', updateLineNumbers);
+            $codeArea.on('scroll', function () {
+                let scrolled = $(this).scrollTop();
+                let less = scrolled;
+                while (less > bg_max_scroll) {
+                    less -= bg_max_scroll + 5;
+                }
+                $lineNumbers.scrollTop(scrolled);
+                $slides.scrollTop(scrolled);
+                $dl_bg.scrollTop(less);
+            });
+            $codeArea.on('mouseup', function (e) {
+                let lh = $lineNumbers.height();
+                let th = $codeArea.height();
+                let tw = $codeArea.width();
+                let bw = $dl_bg.width();
+                if (lh != th) {
+                    $lineNumbers.height(th);
+                    $slides.height(th);
+                    $dl_bg.height(th + 6);
+                }
+                if (tw != bw) {
+                    $container.width(tw + 6);
+                    $dl_bg.width(tw + 20);
+                }
+            });
+
+            var $dl_bg = $('#dl_bg');
+            var rows = [];
+            for (let i = 0; i < 500; i++) {
+                const t = i % 3;
+                rows.push(`<div class="row_${t} bg_line">${t}</div>`)
+            }
+            $dl_bg.prepend(rows.join(""));
+        }
+
+        function cacheBusiness() {
+            $('input[name="cacheFrom"]').on('change', function () {
+                let value = $(this).val();
+                setCachePlaceHolder(value);
+            });
+            $('#removeCache').click(function () {
+                // 使用disable方式，对按钮本身进行 防抖
+                $(this).attr("disabled", true);
+                let wait = $("#queryTimeOut").val();
+                wait = parseInt(wait) * 1000;
+                try {
+                    let queryParams = getCacheParams();
+                    if (queryParams == null) {
+                        return;
+                    }
+                    let xhr_data = {
+                        timeout: wait,
+                        method: "PUT",
+                        url: baseUrl + "/cache/manager",
+                        dataType: "json",
+                        data: JSON.stringify(queryParams)
+                    };
+                    const jqxhr = $.ajax(xhr_data);
+                    jqxhr.done(function (result) {
+                        if (result.data) {
+                            const statusData = result.data;
+                            let slides = [];
+                            for (const trackName of statusData) {
+                                if (trackName && trackName.constructor === Object) {
+                                    slides.push(`<div>${JSON.stringify(trackName)}</div>`);
+                                } else {
+                                    slides.push(`<div>${trackName}</div>`);
+                                }
+                            }
+                            $("#slides").empty();
+                            $("#slides").html(slides.join(""));
+                            $("#slides").scrollTop($('#deviceList').scrollTop());
+                        } else {
+                            alert(result.message);
+                            console.log(result.message);
+                        }
+                    });
+                    jqxhr.fail(function () {
+                        alert("操作失败");
+                    });
+                } catch (error) {
+                    console.log(error);
+                } finally {
+                    $(this).removeAttr("disabled");
+                }
+            })
+
+            $('#queryCache').click(function () {
+                // 使用disable方式，对按钮本身进行 防抖
+                $(this).attr("disabled", true);
+                let wait = $("#queryTimeOut").val();
+                wait = parseInt(wait) * 1000;
+                try {
+                    let queryParams = getCacheParams();
+                    if (queryParams == null) {
+                        queryParams = {
+                            cacheFrom: "all"
+                        };
+                    }
+                    let xhr_data = {
+                        timeout: wait,
+                        method: "POST",
+                        url: baseUrl + "/cache/manager",
+                        dataType: "json",
+                        data: JSON.stringify(queryParams)
+                    };
+                    const jqxhr = $.ajax(xhr_data);
+                    jqxhr.done(function (result) {
+                        if (result.data) {
+                            const statusData = result.data;
+                            let slides = [];
+                            for (const trackName of statusData) {
+                                if (trackName && trackName.constructor === Object) {
+                                    slides.push(`<div>${JSON.stringify(trackName)}</div>`);
+                                } else {
+                                    slides.push(`<div>${trackName}</div>`);
+                                }
+                            }
+                            $("#slides").empty();
+                            $("#slides").html(slides.join(""));
+                            $("#slides").scrollTop($('#deviceList').scrollTop());
+                        } else {
+                            alert(result.message);
+                            console.log(result.message);
+                        }
+                    });
+                    jqxhr.fail(function () {
+                        alert("操作失败");
+                    });
+                } catch (error) {
+                    console.log(error);
+                } finally {
+                    $(this).removeAttr("disabled");
+                }
+            })
+        }
+
+        function setCachePlaceHolder(value) {
+            let vinPlaceHolder = `WDCDF7BE1GA801178
+LFMAPE2CXE0538374`;
+            let cnumPlaceHolder = `京D82346
+冀AL2345P`
+            let snPlaceHolder = `BE92E50E72
+C10EE534A0`
+            let idPlaceHolder = `e7f347415f5447e3b891074aafad4369
+a04009cd855f4fe28bd37cedddccae19`
+            switch (value) {
+                case "vin":
+                    $('#deviceList').attr('placeholder', vinPlaceHolder);
+                    break;
+                case "cnum":
+                    $('#deviceList').attr('placeholder', cnumPlaceHolder);
+                    break;
+                case "sn":
+                    $('#deviceList').attr('placeholder', snPlaceHolder);
+                    break;
+                case "id":
+                    $('#deviceList').attr('placeholder', idPlaceHolder);
+                    break;
+                default:
+                    $('#deviceList').attr('placeholder', vinPlaceHolder);
+                    break;
+            }
+        }
+
+        function getCacheParams() {
+            // 获取[缓存来源]选中的radio
+            const cacheFrom = $("input[name='cacheFrom']:checked").val();
+            //从文本框内读取内容
+            const cacheList = $('#deviceList').val();
+            // 内容去除首尾的空白字符
+            const cacheListTrim = cacheList.trim();
+            // 如果内容为空，则返回空
+            if (cacheListTrim.length === 0) {
+                return null;
+            }
+            // 内容按换行符分割
+            const cacheListArray = cacheListTrim.split('\n');
+            return {
+                cacheFrom: cacheFrom,
+                cacheList: cacheListArray
+            }
+        }
+
+    </script>
+</body>
+
+</html>

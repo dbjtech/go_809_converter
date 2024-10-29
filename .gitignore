@@ -13,9 +13,15 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+.local
+.idea
+.vscode
+**/go.sum
+**/configuration.toml
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
 # Go workspace file
 go.work
+git_info.txt
