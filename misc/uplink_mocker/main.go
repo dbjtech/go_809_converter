@@ -309,7 +309,7 @@ func checkLogin(ctx context.Context, message packet_util.Message, conn net.Conn)
 		microg.E("Invalid password")
 		checkStatus = constants.UPLINK_CONNECT_PASSWORD_ERROR
 	}
-	if upConnectReq.UserID != uint32(config.Int(libs.Environment+".converter.platformId")) {
+	if upConnectReq.UserID != uint32(config.Int(libs.Environment+".converter.platformUserId")) {
 		microg.E("Invalid userId")
 		checkStatus = constants.UPLINK_CONNECT_USER_NEED_REGISTER
 	}

@@ -143,7 +143,7 @@ func StartUpLink(ctx context.Context, wg *sync.WaitGroup) {
 
 func login(ctx context.Context, conn net.Conn) bool {
 	upConnectReq := &packet_util.UpConnectReq{
-		UserID:       uint32(config.Int(libs.Environment + ".converter.platformId")),
+		UserID:       uint32(config.Int(libs.Environment + ".converter.platformUserId")),
 		Password:     config.String(libs.Environment + ".converter.platformPassword"),
 		DownlinkIP:   config.String(libs.Environment + ".converter.localServerIP"),
 		DownlinkPort: uint16(config.Int(libs.Environment + ".converter.localServerPort")),
