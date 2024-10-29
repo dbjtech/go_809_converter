@@ -1,0 +1,26 @@
+[develop.converter]
+consolePort = 13031 
+cryptoPacket = [] 
+encryptKey = 223344 
+extendVersion = true # 是否使用809扩展版的协议
+govServerIP = "127.0.0.1" 
+govServerPort = 19001 
+localServerIP = "localhost" 
+localServerPort = 1301 
+openCrypto = false 
+platformId = 1001 
+platformPassword = "123456" 
+platformUserId = 100101 
+protocolVersion = "1.0.0" 
+thirdpartPort = 11223 
+useLocationInterval = false # 一分钟只发送一个位置
+
+[mysql_db]
+database = "qjcg"
+host = "100.64.0.1"
+password = "pabb"
+pool_idle_conns = 1
+pool_size = 1
+port = 3306
+showSQL = true
+user = "pabb"
