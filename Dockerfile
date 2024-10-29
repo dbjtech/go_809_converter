@@ -1,4 +1,4 @@
-FROM registry.cn-qingdao.aliyuncs.com/dbjtech/go-809-converter:go_ent AS build
+FROM registry.cn-qingdao.aliyuncs.com/dbjtech/go_809_converter:go_ent AS build
 
 ENV GOOS=linux
 ENV GOARCH=amd64
@@ -7,8 +7,8 @@ WORKDIR /go/release
 # 添加项目文件
 ADD . .
 # 复制go.sum 避免再下载一次依赖
-COPY --from=registry.cn-qingdao.aliyuncs.com/dbjtech/go-809-converter:go_ent /go/src/go.mod /go/release/.
-COPY --from=registry.cn-qingdao.aliyuncs.com/dbjtech/go-809-converter:go_ent /go/src/go.sum /go/release/.
+COPY --from=registry.cn-qingdao.aliyuncs.com/dbjtech/go_809_converter:go_ent /go/src/go.mod /go/release/.
+COPY --from=registry.cn-qingdao.aliyuncs.com/dbjtech/go_809_converter:go_ent /go/src/go.sum /go/release/.
 
 RUN chmod 755 ./mark_info.sh && ./mark_info.sh
 RUN GOOS=linux GOARCH=amd64 go build -mod=mod  -ldflags '-s -w' -o converter.exe ./converter
