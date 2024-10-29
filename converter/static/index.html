@@ -1,8 +1,8 @@
 <!--
  * @Author: SimingLiu siming.liu@dbjtech.com
  * @Date: 2024-10-29 09:27:22
- * @LastEditors: SimingLiu siming.liu@dbjtech.com
- * @LastEditTime: 2024-10-29 14:13:08
+ * @LastEditors: SimingLiu siming.liu@linketech.cn
+ * @LastEditTime: 2024-10-29 20:28:33
  * @FilePath: \go_809_converter\converter\static\index.html
  * @Description: 
  * 
@@ -169,8 +169,10 @@
 
     <div id="pushHistoryQuery" class="content">
         <div>
-            <input type="search">
+            <input type="search" id="pushTimeData" size="150"><br/>
+            <button id="queryPushTime">查询最后推送时间</button>
         </div>
+        <div id="pushTimeMsg"></div>
     </div>
 
 
@@ -197,15 +199,10 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        function timeFormatter(cell, formatterParams, onRendered) {
-            let timestamp = cell.getValue();
-            if (timestamp === null || typeof (timestamp) === "undefined") {
-                return "-"
+        function timeFormatter(timestamp) {
+            if (timestamp == 0) {
+                return "无";
             }
-            if (timestamp === 0) {
-                return ""
-            }
-            timestamp = parseInt(timestamp);
             let objD = new Date(timestamp * 1000);
             let rough = objD.toLocaleString("zh", options);
             return rough.replace(/[^\d \/ :]+/g, " ");
@@ -375,6 +372,50 @@
                             $("#slides").empty();
                             $("#slides").html(slides.join(""));
                             $("#slides").scrollTop($('#deviceList').scrollTop());
+                        } else {
+                            alert(result.message);
+                            console.log(result.message);
+                        }
+                    });
+                    jqxhr.fail(function () {
+                        alert("操作失败");
+                    });
+                } catch (error) {
+                    console.log(error);
+                } finally {
+                    $(this).removeAttr("disabled");
+                }
+            })
+
+            $('#queryPushTime').click(function () {
+                // 使用disable方式，对按钮本身进行 防抖
+                $(this).attr("disabled", true);
+                $("#pushTimeMsg").empty();
+                const pushTimeStr = $("#pushTimeData").val().trim();
+                try {
+                    if (!pushTimeStr) {
+                        return;
+                    }
+                    const pushTimeList = pushTimeStr.split(",");
+                    let queryParams = {
+                        items: pushTimeList,
+                    }
+                    let xhr_data = {
+                        timeout: 3000,
+                        method: "POST",
+                        url: baseUrl + "/push/time",
+                        dataType: "json",
+                        data: JSON.stringify(queryParams)
+                    };
+                    const jqxhr = $.ajax(xhr_data);
+                    jqxhr.done(function (result) {
+                        if (result.data) {
+                            const statusData = result.data;
+                            let messages = [];
+                            statusData.forEach((item, index) => {
+                                messages.push(`<div>${pushTimeList[index]}: ${timeFormatter(item)}</div>`);
+                            })
+                            $("#pushTimeMsg").html(messages.join(""));
                         } else {
                             alert(result.message);
                             console.log(result.message);

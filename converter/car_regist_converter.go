@@ -128,6 +128,8 @@ func ConvertCarRegister(ctx context.Context, jsonData string) (mws []packet_util
 		}
 		mw := packet_util.MessageWrapper{
 			TraceID: s99.TraceID,
+			Cnum:    name,
+			Sn:      sn,
 			Message: packet_util.BuildMessagePackage(constants.UP_EXG_MSG, vehicleRegister),
 		}
 		mws = append(mws, mw)

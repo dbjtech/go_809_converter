@@ -4,7 +4,7 @@ package converter
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-26 22:33:48
  * @LastEditors: SimingLiu siming.liu@linketech.cn
- * @LastEditTime: 2024-10-27 10:08:38
+ * @LastEditTime: 2024-10-29 19:20:14
  * @FilePath: \go_809_converter\converter\online_offline_converter.go
  * @Description:
  *
@@ -108,6 +108,8 @@ func ConvertOnlineOffline(ctx context.Context, jsonData string) (mws []packet_ut
 	}
 	mw := packet_util.MessageWrapper{
 		TraceID: s10.TraceID,
+		Cnum:    cnum,
+		Sn:      sn,
 		Message: packet_util.BuildMessagePackage(constants.UP_WARN_MSG, warnMsgExtends),
 	}
 	mws = append(mws, mw)

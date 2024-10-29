@@ -4,7 +4,7 @@ package converter
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-25 21:38:29
  * @LastEditors: SimingLiu siming.liu@linketech.cn
- * @LastEditTime: 2024-10-26 22:22:12
+ * @LastEditTime: 2024-10-29 19:18:39
  * @FilePath: \go_809_converter\converter\car_info_converter.go
  * @Description:
  *
@@ -146,6 +146,8 @@ func ConvertCarInfo(ctx context.Context, jsonData string) (mws []packet_util.Mes
 		}
 		mw := packet_util.MessageWrapper{
 			TraceID: s991.TraceID,
+			Cnum:    cnum,
+			Sn:      sn,
 			Message: packet_util.BuildMessagePackage(constants.UP_BASE_MSG, vehicleAdded),
 		}
 		mws = append(mws, mw)

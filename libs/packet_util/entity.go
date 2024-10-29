@@ -84,6 +84,8 @@ func (h *Header) String() string {
 
 type MessageWrapper struct {
 	TraceID string
+	Cnum    string
+	Sn      string
 	Message Message
 }
 

@@ -195,6 +195,8 @@ func ConvertRealLocation(ctx context.Context, jsonData string) (mws []packet_uti
 		}
 		mw := packet_util.MessageWrapper{
 			TraceID: realLocation.TraceID,
+			Cnum:    name,
+			Sn:      terminalInfo.Sn,
 			Message: packet_util.BuildMessagePackage(constants.UP_EXG_MSG, realLocationMsgBody),
 		}
 		mws = append(mws, mw)

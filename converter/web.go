@@ -4,7 +4,7 @@ package converter
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-27 16:57:55
  * @LastEditors: SimingLiu siming.liu@linketech.cn
- * @LastEditTime: 2024-10-27 17:12:51
+ * @LastEditTime: 2024-10-29 20:19:25
  * @FilePath: \go_809_converter\converter\web.go
  * @Description:
  *
@@ -12,11 +12,13 @@ package converter
 
 import (
 	"fmt"
-	"github.com/dbjtech/go_809_converter/exchange"
-	"github.com/dbjtech/go_809_converter/libs/cache"
-	"github.com/dbjtech/go_809_converter/metrics"
 	"net/http"
 	"strconv"
+
+	"github.com/dbjtech/go_809_converter/exchange"
+	"github.com/dbjtech/go_809_converter/libs/cache"
+	"github.com/dbjtech/go_809_converter/libs/daos"
+	"github.com/dbjtech/go_809_converter/metrics"
 
 	"github.com/dbjtech/go_809_converter/libs/database/mysqldb"
 	"github.com/gin-gonic/gin"
@@ -30,6 +32,7 @@ func SetRoute(r *gin.Engine) {
 	r.GET("/metrics", getMetrics(promhttp.Handler()))
 	r.PUT("/cache/manager", removeCache)
 	r.POST("/cache/manager", showCache)
+	r.POST("/push/time", getPushTime)
 }
 func baseSet(r *gin.Engine, name string) {
 	r.GET("/", welcome(name))
@@ -98,6 +101,7 @@ func removeCache(c *gin.Context) {
 	}
 	var cacheQuery cacheQueryBody
 	err := c.BindJSON(&cacheQuery)
+	ctx := c.Request.Context()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"message": err.Error(),
@@ -113,8 +117,38 @@ func removeCache(c *gin.Context) {
 	result := make([]string, len(cacheQuery.CacheList))
 	switch cacheQuery.CacheFrom {
 	case "vin":
+		carIDs := daos.NewSimpleDao().GetCarIdByVin(ctx, cacheQuery.CacheList)
+		for i, v := range cacheQuery.CacheList {
+			carID, ok := carIDs[v]
+			if !ok {
+				result[i] = "车辆不存在"
+				continue
+			}
+			cache.Manager.Remove(carID[:16])
+			result[i] = "清除成功"
+		}
 	case "cnum":
+		carIDs := daos.NewSimpleDao().GetCarIdByCnum(ctx, cacheQuery.CacheList)
+		for i, v := range cacheQuery.CacheList {
+			carID, ok := carIDs[v]
+			if !ok {
+				result[i] = "车辆不存在"
+				continue
+			}
+			cache.Manager.Remove(carID[:16])
+			result[i] = "清除成功"
+		}
 	case "sn":
+		tids := daos.NewSimpleDao().GetTidBySn(ctx, cacheQuery.CacheList)
+		for i, v := range cacheQuery.CacheList {
+			tid, ok := tids[v]
+			if !ok {
+				result[i] = "设备不存在"
+				continue
+			}
+			cache.Manager.Remove(tid[:16])
+			result[i] = "清除成功"
+		}
 	case "id":
 		for i, v := range cacheQuery.CacheList {
 			if len(v) > 16 {
@@ -150,10 +184,41 @@ func showCache(c *gin.Context) {
 		return
 	}
 	result := make([]any, len(cacheQuery.CacheList))
+	ctx := c.Request.Context()
 	switch cacheQuery.CacheFrom {
 	case "vin":
+		carIDs := daos.NewSimpleDao().GetCarIdByVin(ctx, cacheQuery.CacheList)
+		for i, v := range cacheQuery.CacheList {
+			carID, ok := carIDs[v]
+			if !ok {
+				result[i] = "车辆不存在"
+				continue
+			}
+			data := cache.Manager.Get(carID[:16])
+			result[i] = data
+		}
 	case "cnum":
+		carIDs := daos.NewSimpleDao().GetCarIdByCnum(ctx, cacheQuery.CacheList)
+		for i, v := range cacheQuery.CacheList {
+			carID, ok := carIDs[v]
+			if !ok {
+				result[i] = "车辆不存在"
+				continue
+			}
+			data := cache.Manager.Get(carID[:16])
+			result[i] = data
+		}
 	case "sn":
+		tids := daos.NewSimpleDao().GetTidBySn(ctx, cacheQuery.CacheList)
+		for i, v := range cacheQuery.CacheList {
+			tid, ok := tids[v]
+			if !ok {
+				result[i] = "设备不存在"
+				continue
+			}
+			data := cache.Manager.Get(tid[:16])
+			result[i] = data
+		}
 	case "id":
 		for i, v := range cacheQuery.CacheList {
 			if len(v) > 16 {
@@ -165,6 +230,28 @@ func showCache(c *gin.Context) {
 	case "all":
 		info := cache.Manager.ComputeAvailable()
 		result = append(result, fmt.Sprintf("删除缓存:%d个，现存缓存:%d个", info["removed"], info["cached"]))
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data":    result,
+		"message": "操作成功",
+	})
+}
+
+func getPushTime(c *gin.Context) {
+	type pushTimeBody struct {
+		Items []string `json:"items"`
+	}
+	var body pushTimeBody
+	err := c.BindJSON(&body)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+	result := make([]int64, len(body.Items))
+	for i, v := range body.Items {
+		result[i], _ = exchange.TaskMarker.Get(v)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"data":    result,

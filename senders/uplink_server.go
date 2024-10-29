@@ -4,7 +4,7 @@ package senders
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-19 16:40:46
  * @LastEditors: SimingLiu siming.liu@linketech.cn
- * @LastEditTime: 2024-10-28 22:42:14
+ * @LastEditTime: 2024-10-29 19:28:27
  * @FilePath: \go_809_converter\senders\uplink_server.go
  * @Description:
  *
@@ -310,6 +310,9 @@ func Send(ctx context.Context, conn net.Conn, lp *lastPacket) {
 				}
 				microg.I(newCtx, "Send to Uplink  %x = %s", data, msgWrapper.Message.String())
 				lp.refresh()
+				now := time.Now().Unix()
+				exchange.TaskMarker.Set(msgWrapper.Cnum, now)
+				exchange.TaskMarker.Set(msgWrapper.Sn, now)
 			}
 		}
 	}
