@@ -11,7 +11,7 @@ COPY --from=registry.cn-qingdao.aliyuncs.com/dbjtech/go_809_converter:go_ent /go
 COPY --from=registry.cn-qingdao.aliyuncs.com/dbjtech/go_809_converter:go_ent /go/src/go.sum /go/release/.
 
 RUN chmod 755 ./mark_info.sh && ./mark_info.sh
-RUN GOOS=linux GOARCH=amd64 go build -mod=mod  -ldflags '-s -w' -o converter.exe ./converter
+RUN GOOS=linux GOARCH=amd64 go build -mod=mod  -ldflags '-s -w' -o converter.exe .
 
 FROM registry.cn-qingdao.aliyuncs.com/from_docker_hub/alpine:latest
 
