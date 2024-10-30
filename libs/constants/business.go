@@ -1,6 +1,9 @@
 package constants
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 /*
  * @Author: SimingLiu siming.liu@linketech.cn
@@ -58,7 +61,7 @@ const (
 var vehicleColorStr = []string{"", "蓝色", "黄色", "黑色", "白色", "", "", "", "", "其他色"}
 
 func (v VehicleColor) String() string {
-	return vehicleColorStr[v]
+	return fmt.Sprintf("%s(%d)", vehicleColorStr[v], v)
 }
 
 func (v VehicleColor) ToBytes() (data []byte) {

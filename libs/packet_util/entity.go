@@ -528,6 +528,10 @@ func (g *GNSSData) ToBytes() (data []byte) {
 	return allData
 }
 
+func (g *GNSSData) EnableExtends() {
+	g.isExtended = true
+}
+
 type Status uint32
 
 func (s Status) String() string {
@@ -619,6 +623,10 @@ func (u *RealLocation) FromBytes(rawData []byte) (err error) {
 }
 
 func (u *RealLocation) String() string {
+	if u.isExtended {
+		return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, TerminalID:%s, DataType:%d(0x%x), DataLength:%d, "+
+			"GNSSData:%v", u.VehicleNo, u.VehicleColor, u.TerminalID, u.DataType, u.DataType, u.DataLength, u.GNSSData)
+	}
 	return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d(0x%x), DataLength:%d, GNSSData:%v",
 		u.VehicleNo, u.VehicleColor, u.DataType, u.DataType, u.DataLength, u.GNSSData)
 }

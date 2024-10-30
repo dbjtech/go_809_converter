@@ -51,6 +51,11 @@ var dataS106 = []string{
 	`{"res":{"concentration":107,"car_id":"63d30eb8d8c64e86af618d845385e27e","sn":"C1A8E500C4","fake_push":true},"packet_type":"S106"}`,
 }
 
+var dataS13 = []string{
+	`{"res":{"location":[{"address":"","altitude":512,"car_id":"63d30eb8d8c64e86af618d845385e27e","category":1, 
+"cell_id":0,"clatitude":110224666,"clongitude":374576662,"degree":298,"latitude":110210904,"locate_error":10,"locate_type":1,"longitude":374544756,"mcc":0,"mnc":0,"snr":24,"speed":62,"status":2,"t_type":"ZJ210","tid":"1e3e19f291c546008cf2eaad965b493d","timestamp":1730261855,"type":2}]},"packet_type":"S13","trace_id":"Z\u003estZ5Bp","group_name":""}`,
+}
+
 func main() {
 	libs.Environment = "develop"
 	libs.NewConfig()
@@ -77,8 +82,9 @@ func run3rdParty(ctx context.Context) {
 	loop := schedule["loop"]
 	for {
 		// for _, v := range dataS99 {
-		for _, v := range dataS10 {
-			// for _, v := range dataS106 {
+		//for _, v := range dataS10 {
+		// for _, v := range dataS106 {
+		for _, v := range dataS13 {
 			select {
 			case <-ctx.Done():
 				return

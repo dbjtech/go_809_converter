@@ -97,6 +97,7 @@ func ConvertRealLocation(ctx context.Context, jsonData string) (mws []packet_uti
 	}
 	carInfo := realLocation.Res.Car
 	terminalInfo := realLocation.Res.Terminal
+	isExtended := config.Bool(libs.Environment + ".converter.extendVersion")
 	for i, location := range locations {
 		microg.D(ctx, "convert %d/%d", i+1, len(locations))
 		if location.Timestamp == 0 {
@@ -183,6 +184,9 @@ func ConvertRealLocation(ctx context.Context, jsonData string) (mws []packet_uti
 			DormantFuel: fuelStatus,
 		}
 		gnssData.SetTimestamp(int64(location.Timestamp))
+		if isExtended {
+			gnssData.EnableExtends()
+		}
 		realLocationMsgBody := &packet_util.RealLocation{
 			VehicleNo:    name,
 			VehicleColor: plateColor,
@@ -190,7 +194,7 @@ func ConvertRealLocation(ctx context.Context, jsonData string) (mws []packet_uti
 			DataType:     constants.UP_EXG_MSG_REAL_LOCATION,
 			GNSSData:     gnssData,
 		}
-		if config.Bool(libs.Environment + ".converter.extendVersion") {
+		if isExtended {
 			realLocationMsgBody.EnableExtends()
 		}
 		mw := packet_util.MessageWrapper{
