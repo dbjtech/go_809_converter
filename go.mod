@@ -3,6 +3,7 @@ module github.com/dbjtech/go_809_converter
 go 1.23.2
 
 require (
+	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/google/wire v0.6.0

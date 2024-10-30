@@ -13,6 +13,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/gin-contrib/cors"
 	"net/http"
 	"os"
 	"os/signal"
@@ -68,6 +69,10 @@ func main() {
 	if traces.TraceSwitch().WebTraceable {
 		engine.Use(otelgin.Middleware("809_converter"))
 	}
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "x-requested-with")
+	corsConfig.AllowAllOrigins = true
+	engine.Use(cors.New(corsConfig))
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	go receivers.StartDownlink(ctx, &wg)
