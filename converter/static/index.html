@@ -180,7 +180,9 @@
     <script>
         const options = { timeZone: 'Asia/Shanghai', hour12: false };
         // baseUrl = "http://127.0.0.28:9202";
-        baseUrl = window.location.protocol + "//" + window.location.host + "/api/cvt809/v1";
+        const pathname = window.location.pathname;
+        const end = pathname.lastIndexOf("/static/");
+        baseUrl = window.location.protocol + "//" + window.location.host + pathname.substring(0,end);
         $(document).ready(function () {
             $('.tab').click(function () {
                 const tabId = $(this).attr('data-tab');
