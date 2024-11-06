@@ -184,7 +184,7 @@ type UpExgMsgRegister struct {
 	ProducerID        string                 // 11 bytes 车载终端厂商唯一编码
 	TerminalModelType []byte                 // 8 bytes 车载终端型号，不足8位时以“\0”终结
 	TerminalID        string                 // 7 bytes 车载终端编号，大写字母和数字组成
-	TerminalSimCode   string                 // 12 bytes 车载终端SIM卡电话号码。号码不是12位，则在签补充数字0
+	TerminalSimCode   string                 // 12 bytes 车载终端SIM卡电话号码。号码不是12位，则在签补充数字0, 若是扩展版，则是20bytes
 	BrandModels       string                 // 100 bytes 车辆品牌，车型，车牌颜色，车架号; 中间以逗号分隔
 	FuncFlags         FuncFlags              // 8 bytes 设备特色功能标志位，可以表示64种功能. << 0有线断油功能; << 1 无线断油功能 << 2 视频功能
 	isExtended        bool                   // 是否是扩展后的协议
@@ -214,16 +214,19 @@ func (emr *UpExgMsgRegister) FromBytes(rawData []byte) (err error) {
 	emr.TerminalModelType = terminalModelType
 	emr.TerminalID = strings.ToUpper(hex.EncodeToString(bytes.Trim(rawData[58:65], "\x00")))
 	terminalSimCodeBytes := rawData[65:77]
+	if len(rawData) > 77 {
+		emr.isExtended = true
+		terminalSimCodeBytes = rawData[65:85]
+	}
 	terminalSimCodeBytes = bytes.TrimLeft(terminalSimCodeBytes, "0")
 	terminalSimCode, _ := util.GBK2UTF8(terminalSimCodeBytes)
 	emr.TerminalSimCode = string(terminalSimCode)
-	if len(rawData) > 77 {
-		emr.isExtended = true
-		brandModelsBytes := rawData[77:177]
+	if emr.isExtended {
+		brandModelsBytes := rawData[85:185]
 		brandModelsBytes = bytes.Trim(brandModelsBytes, "\x00")
 		brandModels, _ := util.GBK2UTF8(brandModelsBytes)
 		emr.BrandModels = string(brandModels)
-		emr.FuncFlags = FuncFlags(binary.BigEndian.Uint64(rawData[177:185]))
+		emr.FuncFlags = FuncFlags(binary.BigEndian.Uint64(rawData[185:193]))
 	}
 	return nil
 }
