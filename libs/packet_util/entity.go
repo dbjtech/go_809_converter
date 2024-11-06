@@ -250,7 +250,12 @@ func (emr *UpExgMsgRegister) ToBytes() []byte {
 	terminalIDBytes := make([]byte, 7)
 	ti, _ := hex.DecodeString(emr.TerminalID)
 	copy(terminalIDBytes[:], ti)
+	// 部标12字节，带拓展信息的20字节
 	terminalSimCodeBytes := make([]byte, 12)
+	if emr.isExtended {
+		terminalSimCodeBytes = make([]byte, 20)
+	}
+
 	for i := 0; i < len(terminalSimCodeBytes); i++ {
 		terminalSimCodeBytes[i] = '0'
 	}
