@@ -414,9 +414,16 @@
                         if (result.data) {
                             const statusData = result.data;
                             let messages = [];
-                            statusData.forEach((item, index) => {
-                                messages.push(`<div>${pushTimeList[index]}: ${timeFormatter(item)}</div>`);
-                            })
+                            // 如果返回的 statusdata 是 对象，则遍历所有值
+                            if (statusData.constructor === Object) {
+                                for (const [key, value] of Object.entries(statusData)) {
+                                    messages.push(`<div>${key}: ${timeFormatter(value)}</div>`);
+                                }
+                            }else {
+                                statusData.forEach((item, index) => {
+                                    messages.push(`<div>${pushTimeList[index]}: ${timeFormatter(item)}</div>`);
+                                })
+                            }
                             $("#pushTimeMsg").html(messages.join(""));
                         } else {
                             alert(result.message);

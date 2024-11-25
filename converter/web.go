@@ -250,6 +250,14 @@ func getPushTime(c *gin.Context) {
 		return
 	}
 	result := make([]int64, len(body.Items))
+	if len(body.Items) == 1 && body.Items[0] == "*" {
+		allData := exchange.TaskMarker.Items()
+		c.JSON(http.StatusOK, gin.H{
+			"data":    allData,
+			"message": "操作成功",
+		})
+		return
+	}
 	for i, v := range body.Items {
 		result[i], _ = exchange.TaskMarker.Get(v)
 	}
