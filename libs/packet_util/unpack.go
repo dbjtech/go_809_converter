@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-
 	"github.com/dbjtech/go_809_converter/libs"
 	"github.com/dbjtech/go_809_converter/libs/util"
 	"github.com/gookit/config/v2"

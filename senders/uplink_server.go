@@ -311,8 +311,13 @@ func Send(ctx context.Context, conn net.Conn, lp *lastPacket) {
 				microg.I(newCtx, "Send to Uplink  %x = %s", data, msgWrapper.Message.String())
 				lp.refresh()
 				now := time.Now().Unix()
-				exchange.TaskMarker.Set(msgWrapper.Cnum, now)
-				exchange.TaskMarker.Set(msgWrapper.Sn, now)
+				if msgWrapper.Message.Header.MsgID == constants.UP_EXG_MSG_REGISTER {
+					exchange.TaskMarker.Set(msgWrapper.Cnum+"_99", now)
+					exchange.TaskMarker.Set(msgWrapper.Sn+"_99", now)
+				} else {
+					exchange.TaskMarker.Set(msgWrapper.Cnum, now)
+					exchange.TaskMarker.Set(msgWrapper.Sn, now)
+				}
 			}
 		}
 	}

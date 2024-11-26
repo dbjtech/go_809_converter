@@ -29,6 +29,11 @@ var location_809 = map[string]string{
 	"expect.payload": "bea950375231333000000000}",
 }
 
+var car_register = map[string]string{
+	"input":  "5b000000db03cbbae71200000003e90100000000036870bea9434e4831383600000000000000000000000000011201000000d5313030310000000000000031303031000000000000005a024a323130000000c10ee52f8c000030303030303030313733313635373230343738392c2c2c4c46504834424350344e324c313530323100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e69c5d",
+	"expect": "VehicleNo:京CNH186, VehicleColor:蓝色(1), DataType:4609(0x1201), DataLength:213, PlatformID:1001, ProducerID:1001, TerminalModelType:ZJ210, TerminalID:C10EE52F8C, TerminalSimCode:1731657204789, BrandModels:,,,LFPH4BCP4N2L15021, FuncFlag:",
+}
+
 func TestUnpack(t *testing.T) {
 	rawData, err := hex.DecodeString(location_ex["input"])
 	if err != nil {
@@ -48,5 +53,17 @@ func TestUnpackMsgBody(t *testing.T) {
 	message := Unpack(context.TODO(), string(rawData))
 	msgBody := UnpackMsgBody(context.Background(), message)
 	// assert.Equal(t, location1["expect.payload"], hex.EncodeToString(message.Payload))
+	fmt.Println(msgBody)
+}
+
+func TestUnpackRegister(t *testing.T) {
+	rawData, err := hex.DecodeString(car_register["input"])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	message := Unpack(context.TODO(), string(rawData))
+	msgBody := UnpackMsgBody(context.Background(), message)
+	assert.Equal(t, car_register["expect"], msgBody.String())
 	fmt.Println(msgBody)
 }
