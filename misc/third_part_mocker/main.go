@@ -32,6 +32,7 @@ var schedule = map[string]int{
 
 // 车辆注册
 var dataS99 = []string{
+	`{"res": {"terms": [{"dev_type": "ZJ210", "cnum": "\u4eacCNH186", "op_type": "A", "vin": "LFPH4BCP4N2L15021", "sn": "C10EE52F8C", "plate_color": 1, "mobile": 1731659011603}]}, "packet_type": "S99","trace_id":"Hoqp<N<Y"}`,
 	`{"res": {"fake_push": true, "terms": [{"cnum": "\u5180HW9720", "vin": "XNGHYF06HKY74HNYB", "op_type": "D", 
 "vehicle_type": 103, "area_no": "130827", "o_sn": null, "cid": "28a4a2aab2de4bb082fe58a29312f38a", "dev_type": "ZJ210", "op_time": 1729566428, "sn": "BEDCE50272", "type": 1, "plate_color": 0}, {"cnum": "\u5180HW7920", "vin": "XNGHYF06HKY74HNYB", "op_type": "A", "vehicle_type": 103, "area_no": "130827", "o_sn": null, "cid": "28a4a2aab2de4bb082fe58a29312f38a", "dev_type": "ZJ210", "op_time": 1729566428, "sn": "BEDCE50272", "type": 1, "plate_color": 0}], "cid": "28a4a2aab2de4bb082fe58a29312f38a"}, "packet_type": "S99"}`,
 	`{"res": {"loginname": "15801178556", "terms": [{"cnum": "", "vin": "LVGB4B9E8MG452764", "op_type": "A", 
@@ -81,10 +82,10 @@ func run3rdParty(ctx context.Context) {
 	defer conn.Close()
 	loop := schedule["loop"]
 	for {
-		// for _, v := range dataS99 {
-		//for _, v := range dataS10 {
-		// for _, v := range dataS106 {
-		for _, v := range dataS13 {
+		for _, v := range dataS99 {
+			//for _, v := range dataS10 {
+			// for _, v := range dataS106 {
+			//for _, v := range dataS13 {
 			select {
 			case <-ctx.Done():
 				return
