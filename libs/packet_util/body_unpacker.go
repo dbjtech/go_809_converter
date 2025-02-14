@@ -4,7 +4,7 @@ package packet_util
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-18 20:52:48
  * @LastEditors: yangtongbing 1280758415@qq.com
- * @LastEditTime: 2025-02-13 15:17:46
+ * @LastEditTime: 2025-02-14 16:26:01
  * @FilePath: libs/packet_util/body_unpacker.go
  * @Description:
  *
@@ -22,6 +22,7 @@ type MessageWithBody interface {
 	FromBytes(body []byte) error
 	ToBytes() []byte
 	ToJtwBytes() []byte
+	GetDataType() int
 	String() string
 }
 

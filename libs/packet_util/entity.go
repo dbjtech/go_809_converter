@@ -174,6 +174,10 @@ func (u *UpExgMsg) ToJtwBytes() (data []byte) {
 	return []byte{}
 }
 
+func (u *UpExgMsg) GetDataType() int {
+	return int(u.DataType)
+}
+
 func (u *UpExgMsg) String() string {
 	return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d, DataLength:%d, Data:%x",
 		u.VehicleNo, u.VehicleColor, u.DataType, u.DataLength, u.Data)
@@ -332,6 +336,10 @@ func (emr *UpExgMsgRegister) ToJtwBytes() []byte {
 	return allData
 }
 
+func (emr *UpExgMsgRegister) GetDataType() int {
+	return int(emr.DataType)
+}
+
 func (emr *UpExgMsgRegister) String() string {
 	if emr.isExtended {
 		return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d(0x%x), DataLength:%d, PlatformID:%s, "+
@@ -403,6 +411,10 @@ func (u *UpBaseMsg) ToJtwBytes() (data []byte) {
 	return []byte{}
 }
 
+func (u *UpBaseMsg) GetDataType() int {
+	return int(u.DataType)
+}
+
 func (u *UpBaseMsg) String() string {
 	return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d, DataLength:%d, Data:%x",
 		u.VehicleNo, u.VehicleColor, u.DataType, u.DataLength, u.Data)
@@ -460,6 +472,10 @@ func (u *UpWarnMsg) ToBytes() (data []byte) {
 func (u *UpWarnMsg) ToJtwBytes() (data []byte) {
 	// 暂时不用适配交通委
 	return []byte{}
+}
+
+func (u *UpWarnMsg) GetDataType() int {
+	return int(u.DataType)
 }
 
 func (u *UpWarnMsg) String() string {
@@ -781,6 +797,10 @@ func (u *RealLocation) EnableExtends() {
 	u.isExtended = true
 }
 
+func (u *RealLocation) GetDataType() int {
+	return int(u.DataType)
+}
+
 type CarExtraInfo struct {
 	VehicleNo     string                 // 21 bytes   车牌号
 	VehicleColor  constants.VehicleColor // 1	BYTE	 车牌颜色，按照JT/T = None # 415-2006中5.4.12的规定
@@ -838,6 +858,10 @@ func (cei *CarExtraInfo) ToBytes() []byte {
 func (cei *CarExtraInfo) ToJtwBytes() []byte {
 	// 暂时不用适配交通委
 	return []byte{}
+}
+
+func (u *CarExtraInfo) GetDataType() int {
+	return int(u.DataType)
 }
 
 func (cei *CarExtraInfo) String() string {
@@ -976,6 +1000,10 @@ func (va *VehicleAdded) ToJtwBytes() []byte {
 	return []byte{}
 }
 
+func (va *VehicleAdded) GetDataType() int {
+	return int(va.DataType)
+}
+
 func (va *VehicleAdded) String() string {
 	return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d(0x%x), DataLength:%d, CarInfo:%v",
 		va.VehicleNo, va.VehicleColor, va.DataType, va.DataType, va.DataLength, va.CarInfo)
@@ -1041,6 +1069,10 @@ func (ucr *UpConnectReq) ToJtwBytes() (data []byte) {
 	return []byte{}
 }
 
+func (ucr *UpConnectReq) GetDataType() int {
+	return 0
+}
+
 func (ucr *UpConnectReq) String() string {
 	return fmt.Sprintf("UserID:%d, Password:%s, DownlinkIP:%s, DownlinkPort:%d", ucr.UserID, ucr.Password, ucr.DownlinkIP, ucr.DownlinkPort)
 }
@@ -1099,6 +1131,10 @@ func (wme *WarnMsgExtends) ToJtwBytes() []byte {
 	return []byte{}
 }
 
+func (wme *WarnMsgExtends) GetDataType() int {
+	return int(wme.DataType)
+}
+
 func (wme *WarnMsgExtends) String() string {
 	return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d(0x%x), DataLength:%d, Data:%s",
 		wme.VehicleNo, wme.VehicleColor, wme.DataType, wme.DataType, wme.DataLength, wme.Data)
@@ -1137,6 +1173,10 @@ func (ucr *UpConnectResp) ToJtwBytes() []byte {
 	return []byte{}
 }
 
+func (ucr *UpConnectResp) GetDataType() int {
+	return 0
+}
+
 func newUpConnectResp() *UpConnectResp {
 	return &UpConnectResp{}
 }
@@ -1161,6 +1201,10 @@ func (e EmptyBody) ToBytes() []byte {
 
 func (e EmptyBody) ToJtwBytes() []byte {
 	return []byte{}
+}
+
+func (e EmptyBody) GetDataType() int {
+	return 0
 }
 
 func BuildMessagePackage(businessType uint16, msgBody MessageWithBody) Message {
@@ -1221,6 +1265,10 @@ func (cr *DownConnectReq) ToJtwBytes() (data []byte) {
 	return
 }
 
+func (u *DownConnectReq) GetDataType() int {
+	return 0
+}
+
 func (cr *DownConnectReq) String() string {
 	return fmt.Sprintf("VerifyCode:%d", cr.VerifyCode)
 }
@@ -1250,6 +1298,10 @@ func (crs *DownConnectRsp) ToJtwBytes() (data []byte) {
 
 func (crs *DownConnectRsp) String() string {
 	return fmt.Sprintf("Result:%v", crs.Result)
+}
+
+func (crs *DownConnectRsp) GetDataType() int {
+	return 0
 }
 
 func newDownConnectRsp() *DownConnectRsp {

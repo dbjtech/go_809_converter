@@ -4,7 +4,7 @@ package senders
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-19 16:40:46
  * @LastEditors: yangtongbing 1280758415@qq.com
- * @LastEditTime: 2025-02-14 14:58:27
+ * @LastEditTime: 2025-02-14 16:33:46
  * @FilePath: senders/uplink_server.go
  * @Description:
  *
@@ -493,6 +493,12 @@ func SendToJtw(ctx context.Context, conn net.Conn, lp *lastPacket, wg *sync.Wait
 			}
 			// 解析body
 			jtwBody := packet_util.UnpackMsgBody(ctx, message)
+
+			// 只推送车辆注册及定位
+			if jtwBody.GetDataType() != constants.UP_EXG_MSG_REGISTER &&
+				jtwBody.GetDataType() != constants.UP_EXG_MSG_REAL_LOCATION {
+				continue
+			}
 
 			// 组装packetMessage
 			packetMessage := packet_util.Message{}
