@@ -3,9 +3,9 @@ package exchange
 /*
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-18 20:52:48
- * @LastEditors: SimingLiu siming.liu@linketech.cn
- * @LastEditTime: 2024-10-29 19:26:00
- * @FilePath: \go_809_converter\exchange\center.go
+ * @LastEditors: yangtongbing 1280758415@qq.com
+ * @LastEditTime: 2025-02-13 16:33:43
+ * @FilePath: exchange/center.go
  * @Description:
  *
  */
@@ -20,3 +20,4 @@ var DownLinkVerifyCode uint32
 var UpLinkDataQueue = make(chan packet_util.MessageWrapper, 1000)
 var ConverterWorker = 0
 var TaskMarker = cmap.New[int64]()
+var JtwUpLinkDataQueue = make(chan []byte, 1000)

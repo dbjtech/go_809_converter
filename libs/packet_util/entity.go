@@ -147,7 +147,6 @@ func (u *UpExgMsg) FromBytes(rawData []byte) (err error) {
 }
 
 func (u *UpExgMsg) ToBytes() (data []byte) {
-
 	defer func() {
 		if r := recover(); r != nil {
 			microg.E(fmt.Sprintf("%v", r))
@@ -168,6 +167,11 @@ func (u *UpExgMsg) ToBytes() (data []byte) {
 	dataSet := [][]byte{vehicleNoBytes[:], vehicleColorBytes, dataTypeBytes, dataLengthBytes, u.Data}
 	allData := bytes.Join(dataSet, []byte{})
 	return allData
+}
+
+func (u *UpExgMsg) ToJtwBytes() (data []byte) {
+	// 暂时不用适配交通委
+	return []byte{}
 }
 
 func (u *UpExgMsg) String() string {
@@ -287,6 +291,47 @@ func (emr *UpExgMsgRegister) ToBytes() []byte {
 	return allData
 }
 
+func (emr *UpExgMsgRegister) ToJtwBytes() []byte {
+	defer func() {
+		if r := recover(); r != nil {
+			microg.E(fmt.Sprintf("%v", r))
+		}
+	}()
+	vehicleNoBytes := make([]byte, 21)
+	vn, _ := util.UTF82GBK([]byte(emr.VehicleNo))
+	copy(vehicleNoBytes[:], vn)
+	vehicleColorBytes := emr.VehicleColor.ToBytes()
+	dataTypeBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(dataTypeBytes, emr.DataType)
+	platformIDBytes := make([]byte, 11)
+	copy(platformIDBytes[:], []byte(emr.PlatformID))
+	producerIDBytes := make([]byte, 11)
+	copy(producerIDBytes[:], []byte(emr.ProducerID))
+	terminalModelTypeBytes := make([]byte, 8)
+	tmt, _ := util.UTF82GBK([]byte(emr.TerminalModelType))
+	copy(terminalModelTypeBytes[:], tmt)
+	terminalIDBytes := make([]byte, 7)
+	ti, _ := hex.DecodeString(emr.TerminalID)
+	copy(terminalIDBytes[:], ti)
+	terminalSimCodeBytes := make([]byte, 12)
+	for i := 0; i < len(terminalSimCodeBytes); i++ {
+		terminalSimCodeBytes[i] = '0'
+	}
+	ts, _ := util.UTF82GBK([]byte(emr.TerminalSimCode))
+	tsLength := len(ts)
+	minIndex := len(terminalSimCodeBytes) - tsLength
+	if minIndex < 0 {
+		minIndex = 0
+	}
+	copy(terminalSimCodeBytes[minIndex:], ts)
+	emr.DataLength = uint32(len(platformIDBytes) + len(producerIDBytes) + len(terminalIDBytes) + len(terminalSimCodeBytes))
+	dataLengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(dataLengthBytes, emr.DataLength)
+	dataSet := [][]byte{vehicleNoBytes, vehicleColorBytes, dataTypeBytes, dataLengthBytes, platformIDBytes, producerIDBytes, terminalModelTypeBytes, terminalIDBytes, terminalSimCodeBytes}
+	allData := bytes.Join(dataSet, []byte{})
+	return allData
+}
+
 func (emr *UpExgMsgRegister) String() string {
 	if emr.isExtended {
 		return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d(0x%x), DataLength:%d, PlatformID:%s, "+
@@ -353,6 +398,11 @@ func (u *UpBaseMsg) ToBytes() (data []byte) {
 	return allData
 }
 
+func (u *UpBaseMsg) ToJtwBytes() (data []byte) {
+	// 暂时不用适配交通委
+	return []byte{}
+}
+
 func (u *UpBaseMsg) String() string {
 	return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d, DataLength:%d, Data:%x",
 		u.VehicleNo, u.VehicleColor, u.DataType, u.DataLength, u.Data)
@@ -405,6 +455,11 @@ func (u *UpWarnMsg) ToBytes() (data []byte) {
 	dataSet := [][]byte{vehicleNoBytes[:], vehicleColorBytes, dataTypeBytes, dataLengthBytes, u.Data}
 	allData := bytes.Join(dataSet, []byte{})
 	return allData
+}
+
+func (u *UpWarnMsg) ToJtwBytes() (data []byte) {
+	// 暂时不用适配交通委
+	return []byte{}
 }
 
 func (u *UpWarnMsg) String() string {
@@ -532,6 +587,31 @@ func (g *GNSSData) ToBytes() (data []byte) {
 	if g.isExtended {
 		dataSet = append(dataSet, []byte{byte(g.WiredFuel), byte(g.DormantFuel)})
 	}
+	allData := bytes.Join(dataSet, []byte{})
+	return allData
+}
+
+func (g *GNSSData) ToJtwBytes() (data []byte) {
+	encrypt := []byte{g.Encrypt}
+	lon := make([]byte, 4)
+	binary.BigEndian.PutUint32(lon, g.Lon)
+	lat := make([]byte, 4)
+	binary.BigEndian.PutUint32(lat, g.Lat)
+	vec1 := make([]byte, 2)
+	binary.BigEndian.PutUint16(vec1, g.Vec1)
+	vec2 := make([]byte, 2)
+	binary.BigEndian.PutUint16(vec2, g.Vec2)
+	vec3 := make([]byte, 4)
+	binary.BigEndian.PutUint32(vec3, g.Vec3)
+	direction := make([]byte, 2)
+	binary.BigEndian.PutUint16(direction, g.Direction)
+	altitude := make([]byte, 2)
+	binary.BigEndian.PutUint16(altitude, g.Altitude)
+	status := make([]byte, 4)
+	binary.BigEndian.PutUint32(status, uint32(g.Status))
+	alarm := make([]byte, 4)
+	binary.BigEndian.PutUint32(alarm, uint32(g.Alarm))
+	dataSet := [][]byte{encrypt, g.Date[:], g.Time[:], lon, lat, vec1, vec2, vec3, direction, altitude, status, alarm}
 	allData := bytes.Join(dataSet, []byte{})
 	return allData
 }
@@ -670,6 +750,33 @@ func (u *RealLocation) ToBytes() []byte {
 	return allData
 }
 
+func (u *RealLocation) ToJtwBytes() []byte {
+	defer func() {
+		if r := recover(); r != nil {
+			microg.E(fmt.Sprintf("%v", r))
+		}
+	}()
+	vehicleNoBytes := [21]byte{}
+	vehicleNo, err := util.UTF82GBK([]byte(u.VehicleNo))
+	if err != nil {
+		microg.E(err)
+	}
+	copy(vehicleNoBytes[:], vehicleNo)
+	vehicleColorBytes := u.VehicleColor.ToBytes()
+	terminalIDBytes := make([]byte, 7)
+	ti, _ := hex.DecodeString(u.TerminalID)
+	copy(terminalIDBytes[:], ti)
+	dataTypeBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(dataTypeBytes, u.DataType)
+	gnssDataBytes := u.GNSSData.ToJtwBytes()
+	u.DataLength = uint32(len(gnssDataBytes))
+	dataLengthBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(dataLengthBytes, u.DataLength)
+	dataSet := [][]byte{vehicleNoBytes[:], vehicleColorBytes, dataTypeBytes, dataLengthBytes, gnssDataBytes}
+	allData := bytes.Join(dataSet, []byte{})
+	return allData
+}
+
 func (u *RealLocation) EnableExtends() {
 	u.isExtended = true
 }
@@ -726,6 +833,11 @@ func (cei *CarExtraInfo) ToBytes() []byte {
 	dataSet := [][]byte{vehicleNoBytes[:], vehicleColorBytes, dataTypeBytes, dataLengthBytes, terminalIDBytes,
 		concentrationBytes}
 	return bytes.Join(dataSet, []byte{})
+}
+
+func (cei *CarExtraInfo) ToJtwBytes() []byte {
+	// 暂时不用适配交通委
+	return []byte{}
 }
 
 func (cei *CarExtraInfo) String() string {
@@ -859,6 +971,11 @@ func (va *VehicleAdded) ToBytes() []byte {
 	return bytes.Join(dataSet, []byte{})
 }
 
+func (va *VehicleAdded) ToJtwBytes() []byte {
+	// 暂时不用适配交通委
+	return []byte{}
+}
+
 func (va *VehicleAdded) String() string {
 	return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d(0x%x), DataLength:%d, CarInfo:%v",
 		va.VehicleNo, va.VehicleColor, va.DataType, va.DataType, va.DataLength, va.CarInfo)
@@ -918,6 +1035,12 @@ func (ucr *UpConnectReq) ToBytes() (data []byte) {
 	}
 	return bytes.Join(dataSet, []byte{})
 }
+
+func (ucr *UpConnectReq) ToJtwBytes() (data []byte) {
+	// 暂时不用适配交通委
+	return []byte{}
+}
+
 func (ucr *UpConnectReq) String() string {
 	return fmt.Sprintf("UserID:%d, Password:%s, DownlinkIP:%s, DownlinkPort:%d", ucr.UserID, ucr.Password, ucr.DownlinkIP, ucr.DownlinkPort)
 }
@@ -971,6 +1094,11 @@ func (wme *WarnMsgExtends) ToBytes() []byte {
 	return bytes.Join(dataSet, []byte{})
 }
 
+func (wme *WarnMsgExtends) ToJtwBytes() []byte {
+	// 暂时不用适配交通委
+	return []byte{}
+}
+
 func (wme *WarnMsgExtends) String() string {
 	return fmt.Sprintf("VehicleNo:%s, VehicleColor:%v, DataType:%d(0x%x), DataLength:%d, Data:%s",
 		wme.VehicleNo, wme.VehicleColor, wme.DataType, wme.DataType, wme.DataLength, wme.Data)
@@ -1004,6 +1132,11 @@ func (ucr *UpConnectResp) ToBytes() []byte {
 	return bytes.Join([][]byte{resultBytes, verifyCodeBytes}, []byte{})
 }
 
+func (ucr *UpConnectResp) ToJtwBytes() []byte {
+	// 暂时不用适配交通委
+	return []byte{}
+}
+
 func newUpConnectResp() *UpConnectResp {
 	return &UpConnectResp{}
 }
@@ -1023,6 +1156,10 @@ func (e EmptyBody) String() string {
 }
 
 func (e EmptyBody) ToBytes() []byte {
+	return []byte{}
+}
+
+func (e EmptyBody) ToJtwBytes() []byte {
 	return []byte{}
 }
 
@@ -1078,6 +1215,12 @@ func (cr *DownConnectReq) ToBytes() (data []byte) {
 	return
 }
 
+func (cr *DownConnectReq) ToJtwBytes() (data []byte) {
+	data = make([]byte, 4)
+	binary.BigEndian.PutUint32(data, cr.VerifyCode)
+	return
+}
+
 func (cr *DownConnectReq) String() string {
 	return fmt.Sprintf("VerifyCode:%d", cr.VerifyCode)
 }
@@ -1096,6 +1239,11 @@ func (crs *DownConnectRsp) FromBytes(rawData []byte) error {
 }
 
 func (crs *DownConnectRsp) ToBytes() (data []byte) {
+	data = []byte{byte(crs.Result)}
+	return
+}
+
+func (crs *DownConnectRsp) ToJtwBytes() (data []byte) {
 	data = []byte{byte(crs.Result)}
 	return
 }

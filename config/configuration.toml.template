@@ -2,7 +2,7 @@
 consolePort = 13031 
 cryptoPacket = [] 
 encryptKey = 223344 
-extendVersion = true # 是否使用809扩展版的协议
+extendVersion = true                # 是否使用809扩展版的协议
 govServerIP = "127.0.0.1" 
 govServerPort = 19001 
 localServerIP = "localhost" 
@@ -13,7 +13,13 @@ platformPassword = "123456"
 platformUserId = 100101 
 protocolVersion = "1.0.0" 
 thirdpartPort = 11223 
-useLocationInterval = false # 一分钟只发送一个位置
+useLocationInterval = false         # 一分钟只发送一个位置
+jtwServerIP = "127.0.0.1"           # 交委服务器ip
+jtwServerPort = 19002               # 交委服务器端口
+jtwOpenEncrypt = false              # 交委是否开启加密
+jtwEncryptKey = "123456"            # 交委加密Key
+jtwDownLinkServerIP = "localhost"   # 交委下行服务器ip
+jtwDownLinkServerPort = 1302        # 交委下行服务器端口
 
 [mysql_db]
 database = "qjcg"

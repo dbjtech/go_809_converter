@@ -3,9 +3,9 @@ package packet_util
 /*
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-18 20:52:48
- * @LastEditors: SimingLiu siming.liu@linketech.cn
- * @LastEditTime: 2024-10-27 10:21:51
- * @FilePath: \go_809_converter\libs\packet_util\body_unpacker.go
+ * @LastEditors: yangtongbing 1280758415@qq.com
+ * @LastEditTime: 2025-02-13 15:17:46
+ * @FilePath: libs/packet_util/body_unpacker.go
  * @Description:
  *
  */
@@ -21,6 +21,7 @@ type bodyUnpacker = func(ctx context.Context, body []byte) MessageWithBody
 type MessageWithBody interface {
 	FromBytes(body []byte) error
 	ToBytes() []byte
+	ToJtwBytes() []byte
 	String() string
 }
 

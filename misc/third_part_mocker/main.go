@@ -3,9 +3,9 @@ package main
 /*
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-23 17:07:48
- * @LastEditors: SimingLiu siming.liu@linketech.cn
- * @LastEditTime: 2024-10-27 10:47:37
- * @FilePath: \go_809_converter\misc\third_part_mocker\main.go
+ * @LastEditors: yangtongbing 1280758415@qq.com
+ * @LastEditTime: 2025-02-14 14:56:38
+ * @FilePath: misc/third_part_mocker/main.go
  * @Description:
  *
  */
@@ -45,16 +45,16 @@ var dataS99 = []string{
 // 登录
 
 var dataS10 = []string{
-	`{"res":{"status":1,"tid":"1e3e19f291c546008cf2eaad965b493d","car_id":"63d30eb8d8c64e86af618d845385e27e"},"packet_type":"S10"}`,
+	`{"res":{"status":1,"tid":"c75926d0b17a4b9283b7b04f9e51b46f","car_id":"cfaa51ec416b42b99103b9a73a81a1dd"},"packet_type":"S10"}`,
 }
 
 var dataS106 = []string{
-	`{"res":{"concentration":107,"car_id":"63d30eb8d8c64e86af618d845385e27e","sn":"C1A8E500C4","fake_push":true},"packet_type":"S106"}`,
+	`{"res":{"concentration":107,"car_id":"cfaa51ec416b42b99103b9a73a81a1dd","sn":"C1A8E500C4","fake_push":true},"packet_type":"S106"}`,
 }
 
 var dataS13 = []string{
-	`{"res":{"location":[{"address":"","altitude":512,"car_id":"63d30eb8d8c64e86af618d845385e27e","category":1, 
-"cell_id":0,"clatitude":110224666,"clongitude":374576662,"degree":298,"latitude":110210904,"locate_error":10,"locate_type":1,"longitude":374544756,"mcc":0,"mnc":0,"snr":24,"speed":62,"status":2,"t_type":"ZJ210","tid":"1e3e19f291c546008cf2eaad965b493d","timestamp":1730261855,"type":2}]},"packet_type":"S13","trace_id":"Z\u003estZ5Bp","group_name":""}`,
+	`{"res":{"location":[{"address":"","altitude":512,"car_id":"cfaa51ec416b42b99103b9a73a81a1dd","category":1, 
+"cell_id":0,"clatitude":110224666,"clongitude":374576662,"degree":298,"latitude":110210904,"locate_error":10,"locate_type":1,"longitude":374544756,"mcc":0,"mnc":0,"snr":24,"speed":62,"status":2,"t_type":"ZJ210","tid":"c75926d0b17a4b9283b7b04f9e51b46f","timestamp":1730261855,"type":2}]},"packet_type":"S13","trace_id":"Z\u003estZ5Bp","group_name":""}`,
 }
 
 func main() {
@@ -82,10 +82,10 @@ func run3rdParty(ctx context.Context) {
 	defer conn.Close()
 	loop := schedule["loop"]
 	for {
-		for _, v := range dataS99 {
-			//for _, v := range dataS10 {
-			// for _, v := range dataS106 {
-			//for _, v := range dataS13 {
+		//for _, v := range dataS99 {
+		//for _, v := range dataS10 {
+		//for _, v := range dataS106 {
+		for _, v := range dataS13 {
 			select {
 			case <-ctx.Done():
 				return
