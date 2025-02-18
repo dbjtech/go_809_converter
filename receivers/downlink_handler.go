@@ -95,28 +95,6 @@ func StartDownlink(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-/*
-StartJtwDownLink 上级服务连接本服务，即下行链路
-*/
-func StartJtwDownLink(ctx context.Context, wg *sync.WaitGroup) {
-	localServerPort := config.Int(libs.Environment+".converter.jtwDownLinkServerPort", 1302)
-	addr := fmt.Sprintf(":%d", localServerPort)
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		microg.E("listening %s ERROR: %s", addr, err.Error())
-		return
-	}
-	defer l.Close()
-	microg.I("Local Server: Listening on %s", addr)
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			microg.E("Error accepting connection %s ERROR: %s", addr, err.Error())
-			return
-		}
-		go handleDownLink(ctx, wg, conn)
-	}
-}
 func handleDownLink(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 	defer conn.Close()
 	microg.I("服务器新建反向连接本服务(下行链路) %s", conn.RemoteAddr().String())

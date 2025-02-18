@@ -4,7 +4,7 @@ package main
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-17 20:18:14
  * @LastEditors: yangtongbing 1280758415@qq.com
- * @LastEditTime: 2025-02-13 17:01:11
+ * @LastEditTime: 2025-02-18 09:57:41
  * @FilePath: main.go
  * @Description:
  *
@@ -80,11 +80,6 @@ func main() {
 	go receivers.StartThirdPartyReceiver(ctx, &wg)
 	time.Sleep(time.Second)
 	go senders.StartUpLink(ctx, &wg)
-
-	// 直接给交委发送数据
-	go senders.StartJtwUpLink(ctx, &wg)
-	// 启动交委下行服务
-	go receivers.StartJtwDownLink(ctx, &wg)
 
 	converter.SetRoute(engine)
 	addr := ":" + config.String(libs.Environment+".converter.consolePort", "13031")
