@@ -74,12 +74,24 @@ func main() {
 	corsConfig.AllowAllOrigins = true
 	engine.Use(cors.New(corsConfig))
 	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
-	go receivers.StartDownlink(ctx, &wg)
 
+	var wg sync.WaitGroup
+	// 启动第三方数据消费服务
+	for i := 0; i < exchange.ConverterWorker; i++ {
+		go senders.TransformThirdPartyData(ctx)
+	}
+	// 开放平台下行
+	go receivers.StartDownlink(ctx, &wg)
+	// 启动第三方数据接收服务
 	go receivers.StartThirdPartyReceiver(ctx, &wg)
 	time.Sleep(time.Second)
+	// 开放平台上行
 	go senders.StartUpLink(ctx, &wg)
+
+	// 交委转换服务下行
+	go receivers.StartJtwConverterDownLink(ctx, &wg)
+	// 交委转换服务上行
+	go senders.StartJtwConverterUpLink(ctx, &wg)
 
 	converter.SetRoute(engine)
 	addr := ":" + config.String(libs.Environment+".converter.consolePort", "13031")
@@ -87,6 +99,7 @@ func main() {
 		Addr:    addr,
 		Handler: engine,
 	}
+
 	go func() {
 		// service connections
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

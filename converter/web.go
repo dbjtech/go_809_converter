@@ -91,6 +91,7 @@ func getMetrics(h http.Handler) gin.HandlerFunc {
 func extraSetting() {
 	metrics.PacketPoolSize.WithLabelValues("3rd_part_input").Set(float64(len(exchange.ThirdPartyDataQueue)))
 	metrics.PacketPoolSize.WithLabelValues("uplink_4_send").Set(float64(len(exchange.UpLinkDataQueue)))
+	metrics.PacketPoolSize.WithLabelValues("jtw_converter_uplink_4_send").Set(float64(len(exchange.JtwConverterUpLinkDataQueue)))
 	metrics.CacheSize.WithLabelValues("all_count").Set(float64(cache.Manager.Count()))
 }
 

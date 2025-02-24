@@ -4,7 +4,7 @@ package main
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-23 17:07:48
  * @LastEditors: yangtongbing 1280758415@qq.com
- * @LastEditTime: 2025-02-14 14:56:38
+ * @LastEditTime: 2025-02-20 09:48:34
  * @FilePath: misc/third_part_mocker/main.go
  * @Description:
  *
@@ -32,14 +32,14 @@ var schedule = map[string]int{
 
 // 车辆注册
 var dataS99 = []string{
-	`{"res": {"terms": [{"dev_type": "ZJ210", "cnum": "\u4eacCNH186", "op_type": "A", "vin": "LFPH4BCP4N2L15021", "sn": "C10EE52F8C", "plate_color": 1, "mobile": 1731659011603}]}, "packet_type": "S99","trace_id":"Hoqp<N<Y"}`,
-	`{"res": {"fake_push": true, "terms": [{"cnum": "\u5180HW9720", "vin": "XNGHYF06HKY74HNYB", "op_type": "D", 
-"vehicle_type": 103, "area_no": "130827", "o_sn": null, "cid": "28a4a2aab2de4bb082fe58a29312f38a", "dev_type": "ZJ210", "op_time": 1729566428, "sn": "BEDCE50272", "type": 1, "plate_color": 0}, {"cnum": "\u5180HW7920", "vin": "XNGHYF06HKY74HNYB", "op_type": "A", "vehicle_type": 103, "area_no": "130827", "o_sn": null, "cid": "28a4a2aab2de4bb082fe58a29312f38a", "dev_type": "ZJ210", "op_time": 1729566428, "sn": "BEDCE50272", "type": 1, "plate_color": 0}], "cid": "28a4a2aab2de4bb082fe58a29312f38a"}, "packet_type": "S99"}`,
-	`{"res": {"loginname": "15801178556", "terms": [{"cnum": "", "vin": "LVGB4B9E8MG452764", "op_type": "A", 
-"o_sn": null, "cid": "90c85f911b9041ebbedefeff6dc87ee1", "dev_type": "ZJ210", "op_time": 1729568060, "sn": "C10EE54E52", "fuel_cut_lock": null, "type": 1, "plate_color": 1}], "cid": "90c85f911b9041ebbedefeff6dc87ee1", "installers": "ns", "batch_time": 1727072519, "fake_push": true}, "packet_type": "S99"}`,
-	`{"res": {"fake_push": true, "terms": [{"cnum": "\u5180A455H6", "vin": "XN6SDNJ4AYWRVNNYB", "op_type": "A", 
-"vehicle_type": 200, "area_no": "130109", "o_sn": null, "cid": "28a4a2aab2de4bb082fe58a29312f38a", 
-"dev_type": "ZJ210", "op_time": 1729563615, "sn": "C1A8E500C4", "fuel_cut_lock": 3, "type": 1, "plate_color": 0}], "cid": "28a4a2aab2de4bb082fe58a29312f38a"}, "packet_type": "S99"}`,
+	`{"res": {"terms": [{"dev_type": "ZJ210", "cnum": "冀BQ108S", "op_type": "A", "vin": "12222222222222222", "sn": "C10EE52F8C", "plate_color": 1, "mobile": 1731659011603}]}, "packet_type": "S99","trace_id":"Hoqp<N<Y"}`,
+	//`{"res": {"fake_push": true, "terms": [{"cnum": "\u5180HW9720", "vin": "XNGHYF06HKY74HNYB", "op_type": "D",
+	//"vehicle_type": 103, "area_no": "130827", "o_sn": null, "cid": "28a4a2aab2de4bb082fe58a29312f38a", "dev_type": "ZJ210", "op_time": 1729566428, "sn": "BEDCE50272", "type": 1, "plate_color": 0}, {"cnum": "\u5180HW7920", "vin": "XNGHYF06HKY74HNYB", "op_type": "A", "vehicle_type": 103, "area_no": "130827", "o_sn": null, "cid": "28a4a2aab2de4bb082fe58a29312f38a", "dev_type": "ZJ210", "op_time": 1729566428, "sn": "BEDCE50272", "type": 1, "plate_color": 0}], "cid": "28a4a2aab2de4bb082fe58a29312f38a"}, "packet_type": "S99"}`,
+	//	`{"res": {"loginname": "15801178556", "terms": [{"cnum": "", "vin": "LVGB4B9E8MG452764", "op_type": "A",
+	//"o_sn": null, "cid": "90c85f911b9041ebbedefeff6dc87ee1", "dev_type": "ZJ210", "op_time": 1729568060, "sn": "C10EE54E52", "fuel_cut_lock": null, "type": 1, "plate_color": 1}], "cid": "90c85f911b9041ebbedefeff6dc87ee1", "installers": "ns", "batch_time": 1727072519, "fake_push": true}, "packet_type": "S99"}`,
+	//	`{"res": {"fake_push": true, "terms": [{"cnum": "\u5180A455H6", "vin": "XN6SDNJ4AYWRVNNYB", "op_type": "A",
+	//"vehicle_type": 200, "area_no": "130109", "o_sn": null, "cid": "28a4a2aab2de4bb082fe58a29312f38a",
+	//"dev_type": "ZJ210", "op_time": 1729563615, "sn": "C1A8E500C4", "fuel_cut_lock": 3, "type": 1, "plate_color": 0}], "cid": "28a4a2aab2de4bb082fe58a29312f38a"}, "packet_type": "S99"}`,
 }
 
 // 登录

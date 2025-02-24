@@ -4,7 +4,7 @@ package senders
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-19 16:40:46
  * @LastEditors: yangtongbing 1280758415@qq.com
- * @LastEditTime: 2025-02-18 09:59:53
+ * @LastEditTime: 2025-02-19 14:29:18
  * @FilePath: senders/uplink_server.go
  * @Description:
  *
@@ -103,6 +103,7 @@ func StartUpLink(ctx context.Context, wg *sync.WaitGroup) {
 		case <-ctx.Done():
 			return
 		default:
+			// 开放平台809推送
 			conn := getConnection(ctx, 3)
 			metrics.ConnectCounter.WithLabelValues("uplink_On").Inc()
 			if conn == nil {
@@ -110,27 +111,29 @@ func StartUpLink(ctx context.Context, wg *sync.WaitGroup) {
 			}
 			ok := login(ctx, conn)
 			if !ok {
-				conn.Close()
+				if err := conn.Close(); err != nil {
+					microg.E("Failed to close connection: %v", err)
+				}
 				continue
 			}
+
 			lp := &lastPacket{
 				time:    time.Now(),
 				success: true,
 			}
 			lp.refresh()
-			newCtx, cancel := context.WithCancel(ctx)
-			go Send(newCtx, conn, lp)
+
+			// 新起上下文，独立管理，防止生成很多心跳协程
+			newCtx, newCancel := context.WithCancel(ctx)
 			go makeHeartBeat(newCtx, lp)
 			var newWg sync.WaitGroup
-			for i := 0; i < exchange.ConverterWorker; i++ {
-				newWg.Add(1)
-				go transformThirdPartyData(ctx, lp, &newWg)
-			}
+			newWg.Add(1)
+			go Send(newCtx, conn, lp, &newWg)
 			newWg.Wait()
-			microg.W(ctx, "all transform goroutine done.")
+			microg.W(ctx, "open platform transform goroutine done.")
 			metrics.ConnectCounter.WithLabelValues("uplink_Off").Inc()
-			cancel() // 链路任务结束要关闭另外两个 goroutine
 			conn.Close()
+			newCancel()
 			select {
 			case <-ctx.Done():
 				return
@@ -202,20 +205,17 @@ func getConnection(ctx context.Context, mostTry int) net.Conn {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		microg.E(ctx, "Error connecting:", err.Error())
+		time.Sleep(1000 * time.Millisecond)
 		return getConnection(ctx, mostTry-1)
 	}
 	return conn
 }
 
-func transformThirdPartyData(ctx context.Context, lp *lastPacket, wg *sync.WaitGroup) {
+func TransformThirdPartyData(ctx context.Context) {
 	metrics.ConnectCounter.WithLabelValues("trans_consumer_On").Inc()
 	defer func() {
 		metrics.ConnectCounter.WithLabelValues("trans_consumer_Off").Inc()
-		if wg != nil {
-			wg.Done()
-		}
 	}()
-	ticker := time.NewTicker(2 * time.Millisecond)
 	convertPool := map[string]func(context.Context, string) []packet_util.MessageWrapper{
 		"S99":  converter.ConvertCarRegister,
 		"S991": converter.ConvertCarInfo,
@@ -250,18 +250,18 @@ func transformThirdPartyData(ctx context.Context, lp *lastPacket, wg *sync.WaitG
 						if wrapper.TraceID == "" {
 							continue
 						}
+						if len(exchange.UpLinkDataQueue) >= cap(exchange.UpLinkDataQueue) {
+							<-exchange.UpLinkDataQueue
+							metrics.PacketsDrop.WithLabelValues("up_link").Inc()
+						}
 						exchange.UpLinkDataQueue <- wrapper
+						if len(exchange.JtwConverterUpLinkDataQueue) >= cap(exchange.JtwConverterUpLinkDataQueue) {
+							<-exchange.JtwConverterUpLinkDataQueue
+							metrics.PacketsDrop.WithLabelValues("jtw_converter_up_link").Inc()
+						}
+						exchange.JtwConverterUpLinkDataQueue <- wrapper
 					}
 				}
-			}
-			if !lp.success { //下游推送失败，则应返回，然后关闭连接，重新连接
-				microg.W("uplink push failed, exit")
-				return
-			}
-		case <-ticker.C:
-			if !lp.success {
-				microg.W("uplink push failed, exit")
-				return
 			}
 		}
 	}
@@ -275,7 +275,7 @@ func makeHeartBeat(ctx context.Context, lp *lastPacket) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if lp.past(time.Minute) {
+			if lp.past(30 * time.Second) {
 				heartBeatBody := packet_util.EmptyBody{}
 				heartBeatMessage := packet_util.BuildMessagePackage(constants.UP_LINKTEST_REQ, heartBeatBody)
 				msgWrapper := packet_util.MessageWrapper{
@@ -289,7 +289,16 @@ func makeHeartBeat(ctx context.Context, lp *lastPacket) {
 	}
 }
 
-func Send(ctx context.Context, conn net.Conn, lp *lastPacket) {
+func Send(ctx context.Context, conn net.Conn, lp *lastPacket, wg *sync.WaitGroup) {
+	defer func() {
+		if wg != nil {
+			wg.Done()
+		}
+		if err := conn.Close(); err != nil {
+			microg.E("Failed to close connection: %v", err)
+		}
+	}()
+	ticker := time.NewTicker(time.Second)
 	for {
 		select {
 		case <-ctx.Done():
@@ -298,18 +307,13 @@ func Send(ctx context.Context, conn net.Conn, lp *lastPacket) {
 			newCtx := context.WithValue(context.Background(), microg.TraceKey, msgWrapper.TraceID)
 			data := packet_util.Pack(msgWrapper.Message)
 			if len(data) > 0 {
-				// err := conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-				// if err != nil {
-				// 	microg.E(ctx, "uplink setting write deadline error: %v", err)
-				// 	lp.success = false
-				// }
 				_, err := conn.Write(data)
 				if err != nil {
 					microg.E(newCtx, "Error writing to connection %s ERROR: %s", conn.RemoteAddr().String(), err.Error())
 					lp.success = false
 				}
-				microg.I(newCtx, "Send to Uplink  %x = %s", data, msgWrapper.Message.String())
 				lp.refresh()
+				microg.I(newCtx, "Send to Uplink  %x = %s", data, msgWrapper.Message.String())
 				now := time.Now().Unix()
 				if msgWrapper.Message.Header.MsgID == constants.UP_EXG_MSG_REGISTER {
 					exchange.TaskMarker.Set(msgWrapper.Cnum+"_99", now)
@@ -318,6 +322,10 @@ func Send(ctx context.Context, conn net.Conn, lp *lastPacket) {
 					exchange.TaskMarker.Set(msgWrapper.Cnum, now)
 					exchange.TaskMarker.Set(msgWrapper.Sn, now)
 				}
+			}
+		case <-ticker.C:
+			if !lp.success {
+				return
 			}
 		}
 	}

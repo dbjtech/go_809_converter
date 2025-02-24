@@ -14,6 +14,10 @@ platformUserId = 100101
 protocolVersion = "1.0.0" 
 thirdpartPort = 11223 
 useLocationInterval = false         # 一分钟只发送一个位置
+jtw809ConverterDownLinkIp = "127.0.0.1"
+jtw809ConverterDownLinkPort = 1302
+jtw809ConverterIp = "127.0.0.1"
+jtw809ConverterPort = 1311
 
 [mysql_db]
 database = "qjcg"

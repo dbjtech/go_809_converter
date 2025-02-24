@@ -20,3 +20,4 @@ var DownLinkVerifyCode uint32
 var UpLinkDataQueue = make(chan packet_util.MessageWrapper, 1000)
 var ConverterWorker = 0
 var TaskMarker = cmap.New[int64]()
+var JtwConverterUpLinkDataQueue = make(chan packet_util.MessageWrapper, 1000)
