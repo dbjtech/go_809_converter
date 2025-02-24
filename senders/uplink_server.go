@@ -252,12 +252,12 @@ func TransformThirdPartyData(ctx context.Context) {
 						}
 						if len(exchange.UpLinkDataQueue) >= cap(exchange.UpLinkDataQueue) {
 							<-exchange.UpLinkDataQueue
-							metrics.PacketsDrop.WithLabelValues("up_link").Inc()
+							metrics.PacketsDrop.WithLabelValues("_", "up_link").Inc()
 						}
 						exchange.UpLinkDataQueue <- wrapper
 						if len(exchange.JtwConverterUpLinkDataQueue) >= cap(exchange.JtwConverterUpLinkDataQueue) {
 							<-exchange.JtwConverterUpLinkDataQueue
-							metrics.PacketsDrop.WithLabelValues("jtw_converter_up_link").Inc()
+							metrics.PacketsDrop.WithLabelValues("_", "jtw_converter_up_link").Inc()
 						}
 						exchange.JtwConverterUpLinkDataQueue <- wrapper
 					}
