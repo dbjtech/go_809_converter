@@ -186,6 +186,14 @@ func SendToJtwConverter(ctx context.Context, jtw809ConvertConn net.Conn, lp *las
 				}
 				lp.refresh()
 				microg.I(newCtx, "Send to jtw converter Uplink  %x = %s", data, msgWrapper.Message.String())
+				now := time.Now().Unix()
+				if msgWrapper.Message.Header.MsgID == constants.UP_EXG_MSG_REGISTER {
+					exchange.TaskMarker.Set(msgWrapper.Cnum+"_99", now)
+					exchange.TaskMarker.Set(msgWrapper.Sn+"_99", now)
+				} else {
+					exchange.TaskMarker.Set(msgWrapper.Cnum, now)
+					exchange.TaskMarker.Set(msgWrapper.Sn, now)
+				}
 			}
 		case <-ticker.C:
 			if !lp.success {
