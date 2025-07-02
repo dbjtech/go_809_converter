@@ -13,15 +13,14 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/dbjtech/go_809_converter/converter"
+	"github.com/dbjtech/go_809_converter/libs/database/mysqldb"
 	"github.com/gin-contrib/cors"
+	"github.com/gookit/config/v2"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
-
-	"github.com/dbjtech/go_809_converter/converter"
-	"github.com/dbjtech/go_809_converter/libs/database/mysqldb"
-	"github.com/gookit/config/v2"
 
 	"github.com/dbjtech/go_809_converter/exchange"
 	"github.com/dbjtech/go_809_converter/libs"
@@ -41,12 +40,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var normalTcp bool
+var jtwTcp bool
+
 func parseCommand() {
 	flag.StringVarP(&libs.ConfigType, "type", "t", "toml",
 		"config file type, choose one from [json, yaml, toml(default)]. will ignore at setting config-file")
 	flag.StringVarP(&libs.Environment, "env", "e", "develop", "program environment")
 	flag.StringVarP(&libs.ConfigFile, "config-file", "c", "", "config file path")
 	flag.IntVarP(&exchange.ConverterWorker, "worker", "w", 3, "converter worker numbers")
+	flag.BoolVarP(&normalTcp, "normal-tcp", "n", false, "normal tcp connect mode")
+	flag.BoolVarP(&jtwTcp, "jtw-tcp", "j", false, "Jiao Tong Wei tcp connect mode")
 	flag.Parse()
 }
 
@@ -80,18 +84,22 @@ func main() {
 	for i := 0; i < exchange.ConverterWorker; i++ {
 		go senders.TransformThirdPartyData(ctx)
 	}
-	// 开放平台下行
-	go receivers.StartDownlink(ctx, &wg)
 	// 启动第三方数据接收服务
 	go receivers.StartThirdPartyReceiver(ctx, &wg)
-	time.Sleep(time.Second)
-	// 开放平台上行
-	go senders.StartUpLink(ctx, &wg)
+	if normalTcp {
+		// 开放平台下行
+		go receivers.StartDownlink(ctx, &wg)
+		time.Sleep(time.Second)
+		// 开放平台上行
+		go senders.StartUpLink(ctx, &wg)
+	}
 
-	// 交委转换服务下行
-	go receivers.StartJtwConverterDownLink(ctx, &wg)
-	// 交委转换服务上行
-	go senders.StartJtwConverterUpLink(ctx, &wg)
+	if jtwTcp {
+		// 交委转换服务下行
+		go receivers.StartJtwConverterDownLink(ctx, &wg)
+		// 交委转换服务上行
+		go senders.StartJtwConverterUpLink(ctx, &wg)
+	}
 
 	converter.SetRoute(engine)
 	addr := ":" + config.String(libs.Environment+".converter.consolePort", "13031")
