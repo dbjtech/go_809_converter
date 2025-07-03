@@ -33,6 +33,13 @@ func SetRoute(r *gin.Engine) {
 	r.PUT("/cache/manager", removeCache)
 	r.POST("/cache/manager", showCache)
 	r.POST("/push/time", getPushTime)
+	toolChecker := NewToolChecker()
+	// 初始化日志处理器
+	logProcessor := NewLogProcessor(toolChecker)
+	r.GET("/tools/check", handleToolsCheck(toolChecker))
+	r.GET("/logs/list", handleLogsList(setupConfig))
+	r.POST("/logs/search", handleLogsSearch(logProcessor, setupConfig))
+	r.POST("/logs/search-stream", handleLogsSearchStream(logProcessor, setupConfig))
 }
 func baseSet(r *gin.Engine, name string) {
 	r.GET("/", welcome(name))

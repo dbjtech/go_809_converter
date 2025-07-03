@@ -1,7 +1,7 @@
 FROM registry.cn-qingdao.aliyuncs.com/dbjtech/qjcg:lsm_github_token AS token
-FROM registry.cn-qingdao.aliyuncs.com/from_docker_hub/golang:1.23-alpine AS build
+FROM registry.cn-qingdao.aliyuncs.com/from_docker_hub/golang:1.24-alpine AS build
 # Dockerfile 是基于此镜像构建的。此文件应只用于构建不能运行
-# 应该使用 docker build -t registry.cn-qingdao.aliyuncs.com/dbjtech/go-809-converter:go_ent -f Dockerfile_base . 命令编译
+# 应该使用 docker build --network=host -t registry.cn-qingdao.aliyuncs.com/dbjtech/go-809-converter:go_ent -f Dockerfile_base . 命令编译
 # 编译后push到阿里云或者直接在阿里云上编译
 
 ENV GO111MODULE=on
