@@ -230,6 +230,9 @@ func TransformThirdPartyData(ctx context.Context) {
 			microg.W("cancel transform third party data queue")
 			return
 		case data := <-exchange.ThirdPartyDataQueue:
+			if gjson.Get(data, "res.ping").String() == "yes" { //心跳报文
+				continue
+			}
 			traceID := gjson.Get(data, "trace_id").String()
 			if traceID == "" {
 				traceID = string(util.RandUp(8))
