@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -131,8 +132,7 @@ func handleConnection(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 			n, err := conn.Read(tempBuffer)
 			if n == 0 {
 				if err != nil {
-					var netErr net.Error
-					if !errors.As(err, &netErr) && !netErr.Timeout() {
+					if !errors.Is(err, os.ErrDeadlineExceeded) {
 						microg.W("Connection error: %s", err.Error())
 						return
 					}
