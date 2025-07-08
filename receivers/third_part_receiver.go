@@ -28,6 +28,10 @@ type receiveBuffer struct {
 // add 添加一个字符, 缓存起来，遇到头部信息，才开始添加到缓存
 func (r *receiveBuffer) add(char byte) {
 	if r.size == 0 { // 等匹配上头部信息之后才真正添加内容
+		// 如果 char 是换行符或者空格，则直接跳过
+		if char == '\n' || char == ' ' {
+			return
+		}
 		if char == r.header[r.headMatch] {
 			r.headMatch += 1
 			if r.headMatch == uint8(len(r.header)) { // 头部信息全匹配
