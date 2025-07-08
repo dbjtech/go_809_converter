@@ -338,6 +338,8 @@ func (stp *SystemToolProcessor) SearchInFileStream(ctx context.Context, filename
 
 	// pattern 可能包含 -i -w -x -F -E -m N -A N -B N -C N -e PTRN 等 grep 参数，需要把这些参数过滤掉
 	filteredPattern := filterGrepParams(pattern)
+	// 解析grep -n的输出格式: 行号:内容 or 行号-内容
+	re := regexp.MustCompile(`^(\d+)([-:])(.*)`) // 匹配行号、分隔符和内容
 	scanner := bufio.NewScanner(stdout)
 	var result *SearchResult
 	for scanner.Scan() {
@@ -352,10 +354,8 @@ func (stp *SystemToolProcessor) SearchInFileStream(ctx context.Context, filename
 		if line == "" {
 			continue
 		}
-		// 解析grep -n的输出格式: 行号:内容 or 行号-内容
-		re := regexp.MustCompile(`^(\d+)([-:])(.*)`) // 匹配行号、分隔符和内容
-		matches := re.FindStringSubmatch(line)
 
+		matches := re.FindStringSubmatch(line)
 		if len(matches) == 4 {
 			lineNum, _ := strconv.Atoi(matches[1])
 			delimiter := matches[2]
@@ -615,15 +615,14 @@ func parseGrepOutput(output, pattern string, hasAround bool) []SearchResult {
 
 	// pattern 可能包含 grep 参数，需要过滤掉
 	filteredPattern := filterGrepParams(pattern)
+	// 解析grep -n的输出格式: 行号:内容 or 行号-内容
+	re := regexp.MustCompile(`^(\d+)([-:])(.*)`) // 匹配行号、分隔符和内容
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 
-		// 解析grep -n的输出格式: 行号:内容 or 行号-内容
-		re := regexp.MustCompile(`^(\d+)([-:])(.*)`) // 匹配行号、分隔符和内容
 		matches := re.FindStringSubmatch(line)
-
 		if len(matches) == 4 {
 			lineNum, _ := strconv.Atoi(matches[1])
 			delimiter := matches[2]
