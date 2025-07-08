@@ -20,8 +20,6 @@ import (
 
 // Config 系统配置
 type Config struct {
-	// 服务器配置
-	Server ServerConfig `json:"server"`
 
 	// 日志配置
 	Logging LoggingConfig `json:"logging"`
@@ -33,19 +31,8 @@ type Config struct {
 	Security SecurityConfig `json:"security"`
 }
 
-// ServerConfig 服务器配置
-type ServerConfig struct {
-	Port         int    `json:"port"`
-	Host         string `json:"host"`
-	StaticDir    string `json:"static_dir"`
-	ReadTimeout  int    `json:"read_timeout"`
-	WriteTimeout int    `json:"write_timeout"`
-}
-
 // LoggingConfig 日志配置
 type LoggingConfig struct {
-	Level       string   `json:"level"`
-	LogDir      string   `json:"log_dir"`
 	AllowedExts []string `json:"allowed_extensions"`
 	MaxFileSize int64    `json:"max_file_size"`
 	MaxResults  int      `json:"max_results"`
@@ -95,16 +82,7 @@ func (c *Config) IsAllowedFile(filename string) bool {
 // DefaultConfig 返回默认配置
 func DefaultConfig() *Config {
 	return &Config{
-		Server: ServerConfig{
-			Port:         8080,
-			Host:         "localhost",
-			StaticDir:    "static",
-			ReadTimeout:  30,
-			WriteTimeout: 30,
-		},
 		Logging: LoggingConfig{
-			Level:       "info",
-			LogDir:      ".",
 			AllowedExts: []string{".log", ".gz", ".txt"},
 			MaxFileSize: 200 * 1024 * 1024, // 200MB
 			MaxResults:  10000,

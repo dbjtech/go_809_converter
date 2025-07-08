@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -26,6 +27,21 @@ type SearchResult struct {
 	LineNumber int    `json:"line_number"`
 	Content    string `json:"content"`
 	Matched    string `json:"matched"`
+}
+
+func hasAroundParam(patterns []string) bool {
+	for _, pattern := range patterns {
+		// 将pattern按空格分割
+		parts := strings.FieldsFunc(pattern, func(r rune) bool {
+			return r == ' ' || r == '\t'
+		})
+		for _, p := range parts {
+			if p == "-A" || p == "-B" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // filterGrepParams 过滤pattern中的grep参数，只保留实际的搜索模式
@@ -175,7 +191,7 @@ func (stp *SystemToolProcessor) SearchInFile(filename, pattern string) ([]Search
 	// 处理多层查询：检查pattern是否包含" | "分隔符
 	patterns := strings.Split(pattern, " | ")
 	var grepChain string
-
+	hasAround := hasAroundParam(patterns)
 	if len(patterns) > 1 {
 		// 多层查询：构建多个grep命令的管道
 		if runtime.GOOS == "windows" && !hasUnixTools {
@@ -193,7 +209,7 @@ func (stp *SystemToolProcessor) SearchInFile(filename, pattern string) ([]Search
 				if i == 0 {
 					grepChain = fmt.Sprintf(`grep -n %s`, p)
 				} else {
-					grepChain += fmt.Sprintf(` | grep -n %s`, p)
+					grepChain += fmt.Sprintf(` | grep %s`, p)
 				}
 			}
 		}
@@ -236,7 +252,7 @@ func (stp *SystemToolProcessor) SearchInFile(filename, pattern string) ([]Search
 		return nil, fmt.Errorf("执行系统命令失败: %v", err)
 	}
 
-	return parseGrepOutput(string(output), pattern), nil
+	return parseGrepOutput(string(output), pattern, hasAround), nil
 }
 
 // SearchInFileStream 使用系统工具流式搜索文件
@@ -251,7 +267,7 @@ func (stp *SystemToolProcessor) SearchInFileStream(ctx context.Context, filename
 	// 处理多层查询：检查pattern是否包含" | "分隔符
 	patterns := strings.Split(pattern, " | ")
 	var grepChain string
-
+	hasAround := hasAroundParam(patterns)
 	if len(patterns) > 1 {
 		// 多层查询：构建多个grep命令的管道
 		if runtime.GOOS == "windows" && !hasUnixTools {
@@ -320,7 +336,10 @@ func (stp *SystemToolProcessor) SearchInFileStream(ctx context.Context, filename
 		}
 	}()
 
+	// pattern 可能包含 -i -w -x -F -E -m N -A N -B N -C N -e PTRN 等 grep 参数，需要把这些参数过滤掉
+	filteredPattern := filterGrepParams(pattern)
 	scanner := bufio.NewScanner(stdout)
+	var result *SearchResult
 	for scanner.Scan() {
 		// 检查上下文是否已取消
 		select {
@@ -333,24 +352,44 @@ func (stp *SystemToolProcessor) SearchInFileStream(ctx context.Context, filename
 		if line == "" {
 			continue
 		}
+		// 解析grep -n的输出格式: 行号:内容 or 行号-内容
+		re := regexp.MustCompile(`^(\d+)([-:])(.*)`) // 匹配行号、分隔符和内容
+		matches := re.FindStringSubmatch(line)
 
-		// 解析grep -n的输出格式: 行号:内容
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) == 2 {
-			lineNum := 0
-			_, err := fmt.Sscanf(parts[0], "%d", &lineNum)
-			if err != nil {
-				return err
+		if len(matches) == 4 {
+			lineNum, _ := strconv.Atoi(matches[1])
+			delimiter := matches[2]
+			content := matches[3]
+			if !hasAround {
+				if result == nil {
+					result = new(SearchResult)
+				}
+				result.LineNumber = lineNum
+				result.Content = content
+				result.Matched = filteredPattern
+				callback(*result)
+				result = nil
+			} else {
+				switch delimiter {
+				case ":":
+					if result != nil {
+						callback(*result)
+					}
+					// 匹配行号:内容
+					result = &SearchResult{
+						LineNumber: lineNum,
+						Content:    content,
+						Matched:    filteredPattern,
+					}
+				case "-":
+					// 匹配行号-内容 追加到上一条搜索结果
+					result.Content += "\n" + content
+				}
 			}
-			// pattern 可能包含 -i -w -x -F -E -m N -A N -B N -C N -e PTRN 等 grep 参数，需要把这些参数过滤掉
-			filteredPattern := filterGrepParams(pattern)
-			result := SearchResult{
-				LineNumber: lineNum,
-				Content:    parts[1],
-				Matched:    filteredPattern,
-			}
-			callback(result)
 		}
+	}
+	if result != nil {
+		callback(*result)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -570,7 +609,7 @@ func validateFilePath(filename string) error {
 }
 
 // parseGrepOutput 解析grep命令输出
-func parseGrepOutput(output, pattern string) []SearchResult {
+func parseGrepOutput(output, pattern string, hasAround bool) []SearchResult {
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	var results []SearchResult
 
@@ -581,21 +620,39 @@ func parseGrepOutput(output, pattern string) []SearchResult {
 			continue
 		}
 
-		// 解析grep -n的输出格式: 行号:内容
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) == 2 {
-			lineNum := 0
-			_, err := fmt.Sscanf(parts[0], "%d", &lineNum)
-			if err != nil {
-				microg.E("Failed to parse line number: %s", err)
+		// 解析grep -n的输出格式: 行号:内容 or 行号-内容
+		re := regexp.MustCompile(`^(\d+)([-:])(.*)`) // 匹配行号、分隔符和内容
+		matches := re.FindStringSubmatch(line)
+
+		if len(matches) == 4 {
+			lineNum, _ := strconv.Atoi(matches[1])
+			delimiter := matches[2]
+			content := matches[3]
+			if !hasAround {
+				results = append(results, SearchResult{
+					LineNumber: lineNum,
+					Content:    content,
+					Matched:    filteredPattern,
+				})
+			} else {
+				switch delimiter {
+				case ":":
+					// 匹配行号:内容
+					results = append(results, SearchResult{
+						LineNumber: lineNum,
+						Content:    content,
+						Matched:    filteredPattern,
+					})
+				case "-":
+					// 匹配行号-内容 追加到上一条搜索结果
+					if len(results) > 0 {
+						lastResult := &results[len(results)-1]
+						lastResult.Content += "\n" + content
+					}
+				}
 			}
 
-			results = append(results, SearchResult{
-				LineNumber: lineNum,
-				Content:    parts[1],
-				Matched:    filteredPattern,
-			})
-			if lineNum >= setupConfig.Logging.MaxResults {
+			if len(results) >= setupConfig.Logging.MaxResults {
 				break
 			}
 		}

@@ -364,7 +364,7 @@ function searchLogs() {
                 if (data.error) {
                     searchResults.innerHTML = `<div class="alert alert-danger">${escapeHtml(data.error)}</div>`;
                 } else {
-                    displaySearchResults(data.results, pattern, [selectedFileId]);
+                    displaySearchResults(data.results, [selectedFileId]);
                 }
             })
             .catch(error => {
@@ -428,6 +428,10 @@ function streamSearchLogs() {
     let isRenderScheduled = false;
     const RENDER_BATCH_SIZE = 100; // 每次最多渲染100个结果
     const RENDER_INTERVAL = 15; // 最小渲染间隔15ms
+
+    // 预处理pattern和创建regex，避免在渲染过程中重复计算
+    // 注意：streamHighlightRegex 将在收到第一条结果时基于matched字段创建
+    let streamHighlightRegex = null;
     for (let fileIndex = 0; fileIndex < selectedFileData.length; fileIndex++) {
         const fileData = selectedFileData[fileIndex];
         if (streamAbort) {
@@ -503,7 +507,7 @@ function streamSearchLogs() {
             const fragment = document.createDocumentFragment();
 
             batchToRender.forEach(resultData => {
-                const highlightedLine = highlightMatches(resultData.content, resultData.matched);
+                const highlightedLine = highlightMatchesWithRegex(resultData.content, streamHighlightRegex);
                 const resultDiv = document.createElement('div');
                 resultDiv.className = 'search-result-item mb-2';
                 resultDiv.innerHTML = `
@@ -574,12 +578,15 @@ function streamSearchLogs() {
 
             lines.forEach(line => {
                 // 匹配标签行（格式：标签名:值）
-                const labelMatch = line.match(/^([^:\s]+):\s*(.*)$/);
+                const labelMatch = line.match(/^([^:\s]+):\s*(.*)$/m);
 
                 if (labelMatch) {
                     // 是标签行，创建新对象
                     const [, label, value] = labelMatch;
                     currentItem = [label, value];
+                    if (label === 'content') {
+                        currentItem[1] = line.slice(8);
+                    }
                     result.push(currentItem);
                 } else if (currentItem) {
                     // 不是标签行，将当前行追加到上一个值中
@@ -662,6 +669,8 @@ function streamSearchLogs() {
                             currentEvent = line.substring(7).trim();
                         } else if (line.startsWith('data: ')) {
                             currentData = line.substring(6);
+                        } else {
+                            currentData += "\n" + line;
                         }
                     }
 
@@ -691,6 +700,17 @@ function streamSearchLogs() {
                             const line_number = parsedLines[0][1];
                             const matched = parsedLines[1][1];
                             const content = parsedLines[2][1];
+
+                            // 如果是第一条结果且还没有创建regex，则基于matched字段创建
+                            if (!streamHighlightRegex && matched) {
+                                let processedPattern = matched;
+                                // pattern 如果由 "" 包裹，需要解包
+                                if (processedPattern.startsWith('"') && processedPattern.endsWith('"')) {
+                                    processedPattern = processedPattern.slice(1, -1);
+                                }
+                                const escapedPattern = processedPattern;
+                                streamHighlightRegex = new RegExp(`(${escapedPattern})`, 'gi');
+                            }
 
                             if (line_number && content) {
                                 // 这是一个搜索结果
@@ -825,7 +845,7 @@ function searchMultipleFiles(files, pattern) {
             }
 
             if (allResults.length > 0) {
-                displaySearchResults(allResults, pattern, files);
+                displaySearchResults(allResults, files);
             } else if (errors.length === 0) {
                 searchResults.innerHTML = '<div class="alert alert-info">未找到匹配的结果</div>';
             }
@@ -843,7 +863,7 @@ function searchMultipleFiles(files, pattern) {
 }
 
 // 显示搜索结果
-function displaySearchResults(results, pattern, searchedFiles = []) {
+function displaySearchResults(results, searchedFiles = []) {
     if (!results || results.length === 0) {
         searchResults.innerHTML = `
             <div class="alert alert-info">
@@ -856,6 +876,18 @@ function displaySearchResults(results, pattern, searchedFiles = []) {
 
     const isMultiFile = searchedFiles.length > 1;
     const totalMatches = results.length;
+
+    // 预处理pattern和创建regex，避免重复计算
+    let highlightRegex = null;
+    if (results.length > 0 && results[0].matched) {
+        let pattern = results[0].matched;
+        // pattern 如果由 "" 包裹，需要解包
+        if (pattern.startsWith('"') && pattern.endsWith('"')) {
+            pattern = pattern.slice(1, -1);
+        }
+        const escapedPattern = pattern;
+        highlightRegex = new RegExp(`(${escapedPattern})`, 'gi');
+    }
 
     let html = `
         <div class="search-summary mb-3">
@@ -903,7 +935,7 @@ function displaySearchResults(results, pattern, searchedFiles = []) {
             `;
 
             fileResults.forEach((result, index) => {
-                const highlightedLine = highlightMatches(result.content, pattern);
+                const highlightedLine = highlightMatchesWithRegex(result.content, highlightRegex);
                 html += `
                     <div class="search-result-item mb-2 ms-3">
                         <div class="result-header">
@@ -929,7 +961,7 @@ function displaySearchResults(results, pattern, searchedFiles = []) {
     } else {
         // 单文件搜索，直接显示结果
         results.forEach((result, index) => {
-            const highlightedLine = highlightMatches(result.content, pattern);
+            const highlightedLine = highlightMatchesWithRegex(result.content, highlightRegex);
 
             html += `
                 <div class="search-result-item mb-2">
@@ -953,14 +985,17 @@ function displaySearchResults(results, pattern, searchedFiles = []) {
     searchResults.innerHTML = html;
 }
 
-// 高亮匹配的文本
-function highlightMatches(content, pattern) {
+// 高亮匹配的文本（使用预编译的正则表达式）
+function highlightMatchesWithRegex(content, regex) {
     // 转义HTML特殊字符
     const escapedContent = escapeHtml(content);
-    const escapedPattern = pattern;
 
-    // 使用正则表达式高亮匹配项
-    const regex = new RegExp(`(${escapedPattern})`, 'gi');
+    // 如果没有正则表达式，直接返回转义后的内容
+    if (!regex) {
+        return escapedContent;
+    }
+
+    // 使用预编译的正则表达式高亮匹配项
     return escapedContent.replace(regex, '<span class="matched-text">$1</span>');
 }
 
