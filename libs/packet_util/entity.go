@@ -566,7 +566,7 @@ func (g *GNSSData) String() string {
 	day := uint8(g.Date[0])
 	month := uint8(g.Date[1])
 	year := binary.BigEndian.Uint16(g.Date[2:])
-	date := fmt.Sprintf("%d-%2d-%2d", year, month, day)
+	date := fmt.Sprintf("%d-%02d-%02d", year, month, day)
 	_time := fmt.Sprintf("%02d:%02d:%02d", g.Time[0], g.Time[1], g.Time[2])
 	lon := float64(g.Lon) / 1e6
 	lat := float64(g.Lat) / 1e6
