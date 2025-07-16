@@ -265,6 +265,10 @@ func (emr *UpExgMsgRegister) ToBytes() []byte {
 	terminalSimCodeBytes := make([]byte, 12)
 	if emr.isExtended {
 		terminalSimCodeBytes = make([]byte, 20)
+	} else {
+		if len(emr.TerminalSimCode) > 12 { // 取后面12位
+			emr.TerminalSimCode = emr.TerminalSimCode[len(emr.TerminalSimCode)-12:]
+		}
 	}
 
 	for i := 0; i < len(terminalSimCodeBytes); i++ {
