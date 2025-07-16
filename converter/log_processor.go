@@ -97,7 +97,7 @@ func filterGrepParams(pattern string) string {
 }
 
 func (sr SearchResult) ToBytes() ([]byte, error) {
-	result := fmt.Sprintf("line_number:%v&nl matched:%v&nl content:%v}", sr.LineNumber, sr.Matched, sr.Content)
+	result := fmt.Sprintf("line_number:%v&nl matched:%v&nl content:%v", sr.LineNumber, sr.Matched, sr.Content)
 	return []byte(result), nil
 }
 
