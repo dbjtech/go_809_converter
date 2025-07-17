@@ -56,6 +56,8 @@ func parseCommand() {
 
 func setup() *slsprovider.Config {
 	libs.NewConfig()
+	_ = config.Set("normalTcp", normalTcp, true)
+	_ = config.Set("jtwTcp", jtwTcp, true)
 	metrics.Init809PrometheusClient()
 	otelConf := initTracer("809_converter")
 	//redisdb.InitDefaultRedis()

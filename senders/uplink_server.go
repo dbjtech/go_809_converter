@@ -224,6 +224,8 @@ func TransformThirdPartyData(ctx context.Context) {
 		"S10":  converter.ConvertOnlineOffline,
 	}
 	isExtended := config.Bool(libs.Environment + ".converter.isExtended")
+	isNormalTcp := config.Bool("normalTcp")
+	isJTWTcp := config.Bool("jtwTcp")
 	for {
 		select {
 		case <-ctx.Done():
@@ -253,16 +255,20 @@ func TransformThirdPartyData(ctx context.Context) {
 						if wrapper.TraceID == "" {
 							continue
 						}
-						if len(exchange.UpLinkDataQueue) >= cap(exchange.UpLinkDataQueue) {
-							<-exchange.UpLinkDataQueue
-							metrics.PacketsDrop.WithLabelValues("_", "up_link").Inc()
+						if isNormalTcp {
+							if len(exchange.UpLinkDataQueue) >= cap(exchange.UpLinkDataQueue) {
+								<-exchange.UpLinkDataQueue
+								metrics.PacketsDrop.WithLabelValues("_", "up_link").Inc()
+							}
+							exchange.UpLinkDataQueue <- wrapper
 						}
-						exchange.UpLinkDataQueue <- wrapper
-						if len(exchange.JtwConverterUpLinkDataQueue) >= cap(exchange.JtwConverterUpLinkDataQueue) {
-							<-exchange.JtwConverterUpLinkDataQueue
-							metrics.PacketsDrop.WithLabelValues("_", "jtw_converter_up_link").Inc()
+						if isJTWTcp {
+							if len(exchange.JtwConverterUpLinkDataQueue) >= cap(exchange.JtwConverterUpLinkDataQueue) {
+								<-exchange.JtwConverterUpLinkDataQueue
+								metrics.PacketsDrop.WithLabelValues("_", "jtw_converter_up_link").Inc()
+							}
+							exchange.JtwConverterUpLinkDataQueue <- wrapper
 						}
-						exchange.JtwConverterUpLinkDataQueue <- wrapper
 					}
 				}
 			}
