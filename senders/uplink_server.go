@@ -324,6 +324,7 @@ func Send(ctx context.Context, conn net.Conn, lp *lastPacket, wg *sync.WaitGroup
 			newCtx := context.WithValue(context.Background(), microg.TraceKey, msgWrapper.TraceID)
 			data := packet_util.Pack(msgWrapper.Message)
 			if len(data) > 0 {
+				beginSendTime := time.Now()
 				_, err := conn.Write(data)
 				if err != nil {
 					microg.E(newCtx, "Error writing to connection %s ERROR: %s", conn.RemoteAddr().String(), err.Error())
@@ -331,13 +332,15 @@ func Send(ctx context.Context, conn net.Conn, lp *lastPacket, wg *sync.WaitGroup
 				}
 				lp.refresh()
 				microg.I(newCtx, "Send to Uplink  %x = %s", data, msgWrapper.Message.String())
-				now := time.Now().Unix()
+				now := time.Now()
+				metrics.ElapsedTime.WithLabelValues("809", "up_server", "up").Observe(float64(now.Sub(beginSendTime).Milliseconds()))
+				nowTs := now.Unix()
 				if msgWrapper.Message.Header.MsgID == constants.UP_EXG_MSG_REGISTER {
-					exchange.TaskMarker.Set(msgWrapper.Cnum+"_99", now)
-					exchange.TaskMarker.Set(msgWrapper.Sn+"_99", now)
+					exchange.TaskMarker.Set(msgWrapper.Cnum+"_99", nowTs)
+					exchange.TaskMarker.Set(msgWrapper.Sn+"_99", nowTs)
 				} else {
-					exchange.TaskMarker.Set(msgWrapper.Cnum, now)
-					exchange.TaskMarker.Set(msgWrapper.Sn, now)
+					exchange.TaskMarker.Set(msgWrapper.Cnum, nowTs)
+					exchange.TaskMarker.Set(msgWrapper.Sn, nowTs)
 				}
 			}
 		case <-ticker.C:

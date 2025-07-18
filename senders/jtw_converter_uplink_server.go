@@ -179,6 +179,7 @@ func SendToJtwConverter(ctx context.Context, jtw809ConvertConn net.Conn, lp *las
 			newCtx := context.WithValue(context.Background(), microg.TraceKey, msgWrapper.TraceID)
 			data := packet_util.Pack(msgWrapper.Message)
 			if len(data) > 0 {
+				beginSendTime := time.Now()
 				// 推送交委协议转换服务
 				if _, err := jtw809ConvertConn.Write(data); err != nil {
 					microg.E(newCtx, "Error writing to connection %s ERROR: %s", jtw809ConvertConn.RemoteAddr().String(), err.Error())
@@ -186,13 +187,15 @@ func SendToJtwConverter(ctx context.Context, jtw809ConvertConn net.Conn, lp *las
 				}
 				lp.refresh()
 				microg.I(newCtx, "Send to jtw converter Uplink  %x = %s", data, msgWrapper.Message.String())
-				now := time.Now().Unix()
+				now := time.Now()
+				metrics.ElapsedTime.WithLabelValues("809", "jtw_cvt", "up").Observe(float64(now.Sub(beginSendTime).Milliseconds()))
+				nowTs := now.Unix()
 				if msgWrapper.Message.Header.MsgID == constants.UP_EXG_MSG_REGISTER {
-					exchange.TaskMarker.Set(msgWrapper.Cnum+"_99", now)
-					exchange.TaskMarker.Set(msgWrapper.Sn+"_99", now)
+					exchange.TaskMarker.Set(msgWrapper.Cnum+"_99", nowTs)
+					exchange.TaskMarker.Set(msgWrapper.Sn+"_99", nowTs)
 				} else {
-					exchange.TaskMarker.Set(msgWrapper.Cnum, now)
-					exchange.TaskMarker.Set(msgWrapper.Sn, now)
+					exchange.TaskMarker.Set(msgWrapper.Cnum, nowTs)
+					exchange.TaskMarker.Set(msgWrapper.Sn, nowTs)
 				}
 			}
 		case <-ticker.C:
