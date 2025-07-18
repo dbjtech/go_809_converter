@@ -13,6 +13,7 @@ package senders
 import (
 	"context"
 	"fmt"
+	"go.uber.org/zap"
 	"net"
 	"sync"
 	"time"
@@ -249,6 +250,9 @@ func TransformThirdPartyData(ctx context.Context) {
 					continue
 				}
 				cvt := convertPool[packetType]
+				if cvt == nil {
+					continue
+				}
 				messageWrappers := cvt(newCtx, data)
 				if len(messageWrappers) != 0 {
 					for _, wrapper := range messageWrappers {
@@ -257,14 +261,18 @@ func TransformThirdPartyData(ctx context.Context) {
 						}
 						if isNormalTcp {
 							if len(exchange.UpLinkDataQueue) >= cap(exchange.UpLinkDataQueue) {
-								<-exchange.UpLinkDataQueue
+								dropData := <-exchange.UpLinkDataQueue
+								zapField := zap.String("trace_id", dropData.TraceID)
+								microg.W(zapField, "drop data for full chan")
 								metrics.PacketsDrop.WithLabelValues("_", "up_link").Inc()
 							}
 							exchange.UpLinkDataQueue <- wrapper
 						}
 						if isJTWTcp {
 							if len(exchange.JtwConverterUpLinkDataQueue) >= cap(exchange.JtwConverterUpLinkDataQueue) {
-								<-exchange.JtwConverterUpLinkDataQueue
+								dropData := <-exchange.JtwConverterUpLinkDataQueue
+								zapField := zap.String("trace_id", dropData.TraceID)
+								microg.W(zapField, "drop data for full chan")
 								metrics.PacketsDrop.WithLabelValues("_", "jtw_converter_up_link").Inc()
 							}
 							exchange.JtwConverterUpLinkDataQueue <- wrapper

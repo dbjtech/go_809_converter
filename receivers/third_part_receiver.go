@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/tidwall/gjson"
+	"go.uber.org/zap"
 	"net"
 	"os"
 	"sync"
@@ -152,6 +154,12 @@ func handleConnection(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 					if len(raw) > 0 {
 						if len(exchange.ThirdPartyDataQueue) < cap(exchange.ThirdPartyDataQueue) {
 							exchange.ThirdPartyDataQueue <- raw
+						} else {
+							traceID := gjson.Get(raw, "trace_id").String()
+							if traceID != "" {
+								zapField := zap.String("trace_id", traceID)
+								microg.W(zapField, "Third party entrance data queue is full")
+							}
 						}
 					}
 				}
