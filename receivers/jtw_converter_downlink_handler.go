@@ -22,6 +22,7 @@ import (
 StartJtwConverterDownLink 上级服务连接本服务，即下行链路
 */
 func StartJtwConverterDownLink(ctx context.Context, wg *sync.WaitGroup) {
+	// TODO: 遍历所有连接的jtw转换服务信息并依次启动
 	localServerPort := config.Int(libs.Environment+".converter.jtw809ConverterDownLinkPort", 1302)
 	addr := fmt.Sprintf(":%d", localServerPort)
 	l, err := net.Listen("tcp", addr)
@@ -178,7 +179,8 @@ func keepJtwConverterDownLinkAlive(ctx context.Context, conn net.Conn) {
 func solveJtwConverterDownLinkLogin(ctx context.Context, conn net.Conn, messageBody packet_util.MessageWithBody) {
 	result := constants.CONNECT_VERIFY_CODE_ERROR
 	loginBody := messageBody.(*packet_util.DownConnectReq)
-	if loginBody.VerifyCode == exchange.DownLinkVerifyCode {
+	cvtName := ctx.Value(constants.TracerKeyCvtName).(string)
+	if loginBody.VerifyCode == exchange.DownLinkVerifyCode.Get(cvtName) {
 		result = constants.CONNECT_SUCCESS
 	}
 	loginResult := &packet_util.DownConnectRsp{

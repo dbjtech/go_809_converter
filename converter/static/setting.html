@@ -1,0 +1,423 @@
+<!--
+ * @Author: SimingLiu siming.liu@dbjtech.com
+ * @Date: 2025-01-30 12:00:00
+ * @LastEditors: SimingLiu siming.liu@dbjtech.com
+ * @LastEditTime: 2025-02-19 10:56:00
+ * @FilePath: \go_809_converter\converter\static\setting.html
+ * @Description: 配置管理页面
+ * 
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>809协议转换工具 - 配置管理</title>
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin: 0;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .config-section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+        }
+
+        .config-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .config-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+        }
+
+        .config-item label {
+            min-width: 300px;
+            text-align: right;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .config-item input, .config-item select {
+            flex: 1;
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            margin-left: 10px;
+        }
+
+        .config-item input:focus, .config-item select:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        .modified {
+            color: #ff6b35 !important;
+        }
+
+        .modified::after {
+            content: " *";
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+
+        .actions {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .history-time {
+            font-weight: bold;
+            color: #666;
+            min-width: 150px;
+        }
+
+        .history-operation {
+            flex: 1;
+            margin-left: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .add-config-form {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .add-config-form h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .form-row input {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-running {
+            background-color: #28a745;
+        }
+
+        .status-modified {
+            background-color: #ffc107;
+        }
+
+        .status-error {
+            background-color: #dc3545;
+        }
+
+        .alert {
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+
+        /* 新增：支持 env/jtwTcp/normalTcp 同行展示的样式 */
+        .inline-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .inline-row .config-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0;
+            background-color: transparent;
+            padding: 0;
+        }
+        .inline-row .config-item label {
+            min-width: auto;
+            margin-right: 6px;
+        }
+        .inline-row input[type="checkbox"] {
+            width: auto;
+            height: auto;
+        }
+        /* 历史记录样式增强 */
+        .history-summary {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .history-summary .btn {
+            margin-right: 0;
+        }
+        .history-summary .toggle-details {
+            background-color: #007bff;
+            color: #fff;
+        }
+        .history-summary .toggle-details:hover {
+            background-color: #0069d9;
+        }
+        .history-item[data-expanded="true"] .toggle-details {
+            background-color: #17a2b8;
+        }
+        .history-details {
+            border: 1px solid #e3e3e3;
+            background-color: #fafafa;
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 6px;
+        }
+        .history-details pre {
+            margin: 0;
+            font-family: Menlo, Consolas, monospace;
+            font-size: 12px;
+        }
+        .history-item:hover .history-summary {
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        .history-summary .btn + .btn {
+            margin-left: 6px;
+        }
+        .history-details,
+        .history-summary {
+            transition: background-color 150ms ease-in-out;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>809协议转换工具 - 配置管理</h1>
+            <p>管理系统配置参数，支持动态修改和历史记录</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="current-config">当前配置</div>
+            <div class="tab" data-tab="add-config">添加子项目</div>
+            <div class="tab" data-tab="history">历史记录</div>
+        </div>
+
+        <div id="current-config" class="tab-content active">
+            <div id="config-status" class="alert alert-success" style="display: none;">
+                <span class="status-indicator status-running"></span>
+                配置已加载，系统运行正常
+            </div>
+            
+            <div id="config-sections">
+                <!-- 配置项将通过JavaScript动态加载 -->
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+                <button class="btn btn-secondary" onclick="reloadConfig()">重新加载</button>
+                <button class="btn btn-warning" onclick="resetConfig()">重置为默认</button>
+            </div>
+        </div>
+
+        <div id="add-config" class="tab-content">
+            <div class="add-config-form">
+                <h4>添加新的子项目</h4>
+                <p>添加一个新的 <span id="env-label">develop</span>.converter.xxxx 子项目，系统会自动创建基本配置结构。</p>
+                <div class="form-row">
+                    <label>子项目名称:</label>
+                    <input type="text" id="new-project-name" placeholder="例如: project_c" />
+                    <small>只能包含字母、数字和下划线，将创建为 <span id="env-label-2">develop</span>.converter.项目名称</small>
+                </div>
+                <div class="form-row">
+                    <button class="btn btn-primary" onclick="addNewConfig()">添加子项目</button>
+                    <button class="btn btn-secondary" onclick="clearAddForm()">清空表单</button>
+                </div>
+            </div>
+
+            <div id="existing-configs">
+                <h4>现有配置结构</h4>
+                <div id="config-tree">
+                    <!-- 配置树将通过JavaScript动态加载 -->
+                </div>
+            </div>
+        </div>
+
+        <div id="history" class="tab-content">
+            <div class="actions" style="margin-bottom: 20px;">
+                <button class="btn btn-secondary" onclick="loadHistory()">刷新历史</button>
+                <button class="btn btn-danger" onclick="clearHistory()">清空历史</button>
+            </div>
+            
+            <div class="history-list" id="history-list">
+                <!-- 历史记录将通过JavaScript动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="jquery-3.7.1.min.js"></script>
+    <script src="setting.js"></script>
+</body>
+
+</html>

@@ -13,14 +13,19 @@ package main
 import (
 	"context"
 	"errors"
+
 	"github.com/dbjtech/go_809_converter/converter"
 	"github.com/dbjtech/go_809_converter/libs/database/mysqldb"
-	"github.com/gin-contrib/cors"
-	"github.com/gookit/config/v2"
+	"github.com/dbjtech/go_809_converter/libs/packet_util"
+
+	//"github.com/dbjtech/go_809_converter/libs/database/mysqldb" // 临时注释掉
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gookit/config/v2"
 
 	"github.com/dbjtech/go_809_converter/exchange"
 	"github.com/dbjtech/go_809_converter/libs"
@@ -80,28 +85,29 @@ func main() {
 	corsConfig.AllowAllOrigins = true
 	engine.Use(cors.New(corsConfig))
 	ctx, cancel := context.WithCancel(context.Background())
-
+	initDataQueue()
 	var wg sync.WaitGroup
 	// 启动第三方数据消费服务
 	for i := 0; i < exchange.ConverterWorker; i++ {
-		go senders.TransformThirdPartyData(ctx)
+		senders.TransformThirdPartyData(ctx)
 	}
+	time.Sleep(time.Second)
 	// 启动第三方数据接收服务
-	go receivers.StartThirdPartyReceiver(ctx, &wg)
+	receivers.StartThirdPartyReceiver(ctx, &wg)
 	if normalTcp {
-		// 开放平台下行
+		// 上级平台的下行链路，上级平台连接本服务
 		go receivers.StartDownlink(ctx, &wg)
 		time.Sleep(time.Second)
-		// 开放平台上行
+		// 上级平台的上行链路，本服务连接上级平台
 		go senders.StartUpLink(ctx, &wg)
 	}
 
-	if jtwTcp {
-		// 交委转换服务下行
-		go receivers.StartJtwConverterDownLink(ctx, &wg)
-		// 交委转换服务上行
-		go senders.StartJtwConverterUpLink(ctx, &wg)
-	}
+	// if jtwTcp { // 交委的暂时不改造
+	// 	// 交委转换服务下行
+	// 	go receivers.StartJtwConverterDownLink(ctx, &wg)
+	// 	// 交委转换服务上行
+	// 	go senders.StartJtwConverterUpLink(ctx, &wg)
+	// }
 
 	converter.SetRoute(engine)
 	addr := ":" + config.String(libs.Environment+".converter.consolePort", "13031")
@@ -150,4 +156,14 @@ func initTracer(serviceName string) *slsprovider.Config {
 		panic(err)
 	}
 	return cfg
+}
+
+func initDataQueue() {
+	// 获取 libs.Environment + ".converter" 下的所有子元素，并判断是否开启，和是否开启扩展协议
+	configConverter := config.SubDataMap(libs.Environment + ".converter")
+	for key, _ := range configConverter {
+		exchange.ThirdPartyDataQueuePool[key] = make(chan string, 1000)
+		exchange.UpLinkDataQueuePool[key] = make(chan packet_util.MessageWrapper, 1000)
+		exchange.JtwConverterUpLinkDataQueuePool[key] = make(chan packet_util.MessageWrapper, 1000)
+	}
 }

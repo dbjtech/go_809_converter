@@ -93,8 +93,8 @@ func main() {
 // runUplink 下面的服务连接本服务
 func runUplink(ctx context.Context) {
 
-	host := config.String(libs.Environment + ".converter.govServerIP")
-	port := config.Int(libs.Environment + ".converter.govServerPort")
+	host := config.String(libs.Environment + ".converter.some.govServerIP")
+	port := config.Int(libs.Environment + ".converter.some.govServerPort")
 	addr := fmt.Sprintf("%s:%d", host, port)
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -133,6 +133,7 @@ dlk:
 			conn, err := net.Dial("tcp", addr)
 			if err != nil {
 				microg.E(ctx, "本服务反连客户端(下行)错误:", err.Error())
+				time.Sleep(3 * time.Second)
 				continue
 			}
 			downConnectReq := &packet_util.DownConnectReq{VerifyCode: verifyCode}
@@ -191,7 +192,7 @@ dlk:
 						err := conn.SetReadDeadline(time.Now().Add(time.Second))
 						if err != nil {
 							microg.E("Failed to set read deadline: %v", err)
-							continue
+							continue dlk // 连接死掉了，需要重连开启新连接
 						}
 						n, err := conn.Read(tempBuffer)
 						if err != nil {
@@ -305,11 +306,11 @@ func checkLogin(ctx context.Context, message packet_util.Message, conn net.Conn)
 	}
 	upConnectReq := messageBody.(*packet_util.UpConnectReq)
 	microg.I("Uplink login: %s", upConnectReq.String())
-	if upConnectReq.Password != config.String(libs.Environment+".converter.platformPassword") {
+	if upConnectReq.Password != config.String(libs.Environment+".converter.some.platformPassword") {
 		microg.E("Invalid password")
 		checkStatus = constants.UPLINK_CONNECT_PASSWORD_ERROR
 	}
-	if upConnectReq.UserID != uint32(config.Int(libs.Environment+".converter.platformUserId")) {
+	if upConnectReq.UserID != uint32(config.Int(libs.Environment+".converter.some.platformUserId")) {
 		microg.E("Invalid userId")
 		checkStatus = constants.UPLINK_CONNECT_USER_NEED_REGISTER
 	}
@@ -320,6 +321,7 @@ func checkLogin(ctx context.Context, message packet_util.Message, conn net.Conn)
 	microg.I("Send  %x", data)
 	microg.I(loginRespMessage.String())
 	downlinkAddr := fmt.Sprintf("%s:%d", upConnectReq.DownlinkIP, upConnectReq.DownlinkPort)
+	microg.I("try to connect to downlink server at %s", downlinkAddr)
 	go runDownlink(ctx, downlinkAddr)
 	return checkStatus == constants.UPLINK_CONNECT_SUCCESS
 }

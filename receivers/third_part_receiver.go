@@ -4,15 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/tidwall/gjson"
-	"go.uber.org/zap"
 	"net"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/tidwall/gjson"
+	"go.uber.org/zap"
+
 	"github.com/dbjtech/go_809_converter/exchange"
 	"github.com/dbjtech/go_809_converter/libs"
+	"github.com/dbjtech/go_809_converter/libs/constants"
 	"github.com/dbjtech/go_809_converter/metrics"
 	"github.com/gookit/config/v2"
 
@@ -85,24 +87,36 @@ func newReceiveBuffer() *receiveBuffer {
 }
 
 func StartThirdPartyReceiver(ctx context.Context, wg *sync.WaitGroup) {
-	// 监听本地 11223 端口
-	port := config.Int(libs.Environment+".converter.thirdpartPort", 11223)
-	addr := fmt.Sprintf(":%d", port)
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		microg.W("Failed to listen on %s: %v", addr, err)
-	}
-	defer listener.Close()
-	microg.I("3rd Party Server is listening on %s", addr)
-
-	for {
-		// 接受连接
-		conn, err := listener.Accept()
-		if err != nil {
-			microg.E("Failed to accept connection: %v", err)
+	configConverter := config.SubDataMap(libs.Environment + ".converter")
+	for key, v := range configConverter {
+		m := v.(map[string]any)
+		enable, ok := m["enable"].(bool)
+		if !ok || !enable {
+			microg.W("3rd Party Receiver %s is disabled", key)
 			continue
 		}
-		go handleConnection(ctx, wg, conn)
+		go func(key string) {
+			thirdpartPortKey := libs.Environment + ".converter." + key + ".thirdpartPort"
+			port := config.Int(thirdpartPortKey, 11223)
+			addr := fmt.Sprintf(":%d", port)
+			listener, err := net.Listen("tcp", addr)
+			innerCtx := context.WithValue(ctx, constants.TracerKeyCvtName, key)
+			if err != nil {
+				microg.W(innerCtx, "Failed to listen on %s: %v", addr, err)
+			}
+			defer listener.Close()
+			microg.I(innerCtx, "3rd Party Server is listening on %s for %s", addr, key)
+			for {
+				// 接收连接
+				conn, err := listener.Accept()
+				if err != nil {
+					microg.E(innerCtx, "Failed to accept connection: %v", err)
+					continue
+				}
+				// 连接保持
+				go handleConnection(innerCtx, wg, conn)
+			}
+		}(key)
 	}
 }
 
@@ -113,33 +127,37 @@ func handleConnection(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 		}
 	}()
 	defer conn.Close()
-	microg.I("New connection from %s", conn.RemoteAddr().String())
+	microg.I(ctx, "New connection from %s", conn.RemoteAddr().String())
 	if wg != nil {
 		wg.Add(1)
 		defer wg.Done()
 	}
 	buffer := newReceiveBuffer()
 	tempBuffer := make([]byte, 1024)
-	metrics.ConnectCounter.WithLabelValues("3rd_party_On").Inc()
+	cvtName := ctx.Value(constants.TracerKeyCvtName).(string)
+	onLineKey := fmt.Sprintf("%s_3rd_party_On", cvtName)
+	offLineKey := fmt.Sprintf("%s_3rd_party_Off", cvtName)
+	metrics.ConnectCounter.WithLabelValues(onLineKey).Inc()
 	defer func() {
-		metrics.ConnectCounter.WithLabelValues("3rd_party_Off").Inc()
+		metrics.ConnectCounter.WithLabelValues(offLineKey).Inc()
 	}()
+	thirdPartyDataQueue := exchange.ThirdPartyDataQueuePool[cvtName]
 	for {
 		err := conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 		if err != nil {
-			microg.E("Failed to set read deadline: %v", err)
+			microg.E(ctx, "Failed to set read deadline: %v", err)
 			return
 		}
 		select {
 		case <-ctx.Done():
-			microg.W("exit third party receiver %s", conn.RemoteAddr().String())
+			microg.W(ctx, "exit third party receiver %s", conn.RemoteAddr().String())
 			return
 		default:
 			n, err := conn.Read(tempBuffer)
 			if n == 0 {
 				if err != nil {
 					if !errors.Is(err, os.ErrDeadlineExceeded) {
-						microg.W("Connection error: %s", err.Error())
+						microg.W(ctx, "Connection error: %s", err.Error())
 						return
 					}
 				}
@@ -152,13 +170,13 @@ func handleConnection(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 				if buffer.matched() {
 					raw := buffer.flush()
 					if len(raw) > 0 {
-						if len(exchange.ThirdPartyDataQueue) < cap(exchange.ThirdPartyDataQueue) {
-							exchange.ThirdPartyDataQueue <- raw
+						if len(thirdPartyDataQueue) < cap(thirdPartyDataQueue) {
+							thirdPartyDataQueue <- raw
 						} else {
 							traceID := gjson.Get(raw, "trace_id").String()
 							if traceID != "" {
 								zapField := zap.String("trace_id", traceID)
-								microg.W(zapField, "Third party entrance data queue is full")
+								microg.W(ctx, zapField, "Third party entrance data queue is full")
 							}
 						}
 					}

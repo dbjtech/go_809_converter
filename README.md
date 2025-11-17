@@ -69,3 +69,7 @@
 | {env}.converter.protocolVersion     | 本平台连接上级服务时使用的协议版本                   | "1.0.0" |
 | {env}.converter.thirdpartPort       | 本服务接受第三方推送连接的端口                     | 11223   |
 | {env}.converter.useLocationInterval | 是否有分钟只推送一个位置报文给上级平台                 | false   |
+
+### 提示
+
+如果需要使用docker部署，最好是外挂 config/configuration.toml 和 config/config.history 

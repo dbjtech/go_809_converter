@@ -138,7 +138,9 @@ func ConvertRealLocation(ctx context.Context, jsonData string) (mws []packet_uti
 		cnum := carInfo.Cnum
 		name := cnum
 		if name == "" {
-			name = vin
+			microg.W(ctx, "%s 在 t_car 表未配置车牌号", vin)
+			return nil
+			//name = vin
 		}
 		plateColor := constants.VehicleColor(carInfo.PlateColor)
 		if plateColor == 0 {

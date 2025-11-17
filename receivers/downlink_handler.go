@@ -76,28 +76,47 @@ func newDownlinkReceiveBuffer() *downlinkReceiveBuffer {
 StartDownlink 上级服务连接本服务，即下行链路
 */
 func StartDownlink(ctx context.Context, wg *sync.WaitGroup) {
-	localServerPort := config.Int(libs.Environment+".converter.localServerPort", 1301)
-	addr := fmt.Sprintf(":%d", localServerPort)
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		microg.E("listening %s ERROR: %s", addr, err.Error())
-		return
-	}
-	defer l.Close()
-	microg.I("Local Server: Listening on %s", addr)
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			microg.E("Error accepting connection %s ERROR: %s", addr, err.Error())
-			return
+	// 获取 libs.Environment + ".converter" 下的所有子元素，并判断是否开启
+	configConverter := config.SubDataMap(libs.Environment + ".converter")
+	for key, value := range configConverter {
+		m := value.(map[string]any)
+		enable, ok := m["enable"].(bool)
+		if !ok || !enable {
+			microg.W("downlink %s is disabled", key)
+			continue
 		}
-		go handleDownLink(ctx, wg, conn)
+		go func(ctx context.Context, key string, wg *sync.WaitGroup) {
+			innerCtx := context.WithValue(ctx, constants.TracerKeyCvtName, key)
+			localServerPort := config.Int(libs.Environment+".converter."+key+".localServerPort", 1301)
+			addr := fmt.Sprintf(":%d", localServerPort)
+			l, err := net.Listen("tcp", addr)
+			if err != nil {
+				microg.E(innerCtx, "listening %s ERROR: %s", addr, err.Error())
+				return
+			}
+			defer l.Close()
+			microg.I(innerCtx, "Local Server: Listening on %s", addr)
+			for {
+				conn, err := l.Accept()
+				if err != nil {
+					microg.E(innerCtx, "Error accepting connection %s ERROR: %s", addr, err.Error())
+					return
+				}
+				go handleDownLink(innerCtx, wg, conn)
+			}
+		}(ctx, key, wg)
+
 	}
 }
 
 func handleDownLink(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 	defer conn.Close()
-	microg.I("服务器新建反向连接本服务(下行链路) %s", conn.RemoteAddr().String())
+	defer func() {
+		if err := recover(); err != nil {
+			microg.E(ctx, "error handling downlink: %s", err)
+		}
+	}()
+	microg.I(ctx, "服务器新建反向连接本服务(下行链路) %s", conn.RemoteAddr().String())
 	if wg != nil {
 		wg.Add(1)
 		defer wg.Done()
@@ -106,6 +125,7 @@ func handleDownLink(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 	lp := &lastPacket{
 		time: time.Now(),
 	}
+	cvtName := ctx.Value(constants.TracerKeyCvtName).(string)
 	newCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go handleResponseDownlink(newCtx, conn, innerDataChan, lp)
@@ -114,20 +134,20 @@ func handleDownLink(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 	}()
 	buffer := newDownlinkReceiveBuffer()
 	tempBuffer := make([]byte, 1024)
-	metrics.ConnectCounter.WithLabelValues("downlink_On").Inc()
+	metrics.ConnectCounter.WithLabelValues(cvtName + "_downlink_On").Inc()
 	defer func() {
-		metrics.ConnectCounter.WithLabelValues("downlink_Off").Inc()
+		metrics.ConnectCounter.WithLabelValues(cvtName + "_downlink_Off").Inc()
 	}()
 	readEoFCounter := 0
 	for {
 		err := conn.SetReadDeadline(time.Now().Add(1500 * time.Millisecond))
 		if err != nil {
-			microg.E("Failed to set read deadline: %v", err)
+			microg.E(ctx, "Failed to set read deadline: %v", err)
 			return
 		}
 		select {
 		case <-ctx.Done():
-			microg.W("main process cancel downlink receiver connection %s", conn.RemoteAddr().String())
+			microg.W(ctx, "main process cancel downlink receiver connection %s", conn.RemoteAddr().String())
 		default:
 			n, err := conn.Read(tempBuffer)
 			if err != nil {
@@ -155,7 +175,8 @@ func handleDownLink(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
 					rawData := buffer.flush()
 					if rawData != "" { // 如果发送空字符串过去，会关闭回复通道
 						newCtx := context.WithValue(context.Background(), microg.TraceKey, string(util.RandUp(8)))
-						microg.I("Downlink received: %x", rawData)
+						newCtx = context.WithValue(newCtx, constants.TracerKeyCvtName, cvtName)
+						microg.I(ctx, "Downlink received: %x", rawData)
 						innerDataChan <- packetData{
 							ctx: newCtx,
 							raw: rawData,
@@ -178,11 +199,11 @@ func handleResponseDownlink(ctx context.Context, conn net.Conn, innerDataChan ch
 	for {
 		select {
 		case <-ctx.Done():
-			microg.W("cancel downlink response connection %s", conn.RemoteAddr().String())
+			microg.W(ctx, "cancel downlink response connection %s", conn.RemoteAddr().String())
 			return
 		case data := <-innerDataChan:
 			if data.raw == "" {
-				microg.W("downlink %s send nothing", conn.RemoteAddr().String())
+				microg.W(ctx, "downlink %s send nothing", conn.RemoteAddr().String())
 				continue
 			}
 			newCtx := data.ctx
@@ -232,7 +253,8 @@ func keepDownLinkAlive(ctx context.Context, conn net.Conn) {
 func solveDownLinkLogin(ctx context.Context, conn net.Conn, messageBody packet_util.MessageWithBody) {
 	result := constants.CONNECT_VERIFY_CODE_ERROR
 	loginBody := messageBody.(*packet_util.DownConnectReq)
-	if loginBody.VerifyCode == exchange.DownLinkVerifyCode {
+	cvtName := ctx.Value(constants.TracerKeyCvtName).(string)
+	if loginBody.VerifyCode == exchange.DownLinkVerifyCode.Get(cvtName) {
 		result = constants.CONNECT_SUCCESS
 	}
 	loginResult := &packet_util.DownConnectRsp{

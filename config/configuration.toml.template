@@ -1,12 +1,16 @@
-[develop.converter]
+[develop]
 consolePort = 13031 
+
+[develop.converter.project_a]
 cryptoPacket = [] 
+enable = true
 encryptKey = 223344 
 extendVersion = true                # 是否使用809扩展版的协议
-govServerIP = "127.0.0.1" 
+govServerIP = "192.168.3.56" 
 govServerPort = 19001 
 localServerIP = "localhost" 
-localServerPort = 1301 
+localServerPort = 1301
+project_a = "project_a" 
 openCrypto = false 
 platformId = 1001 
 platformPassword = "123456" 
@@ -21,10 +25,10 @@ jtw809ConverterPort = 1311
 
 [mysql_db]
 database = "qjcg"
-host = "100.64.0.1"
+host = "mysql-server"
 password = "pabb"
 pool_idle_conns = 1
 pool_size = 1
-port = 3306
+port = 13306
 showSQL = true
 user = "pabb"

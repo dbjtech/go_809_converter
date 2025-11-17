@@ -14,6 +14,11 @@ import (
  * @Description:
  *
  */
+type TracerKey string
+
+const (
+	TracerKeyCvtName string = "cvtName"
+)
 
 type ConnectStatus uint8
 

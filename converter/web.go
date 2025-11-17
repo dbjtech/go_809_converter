@@ -33,6 +33,18 @@ func SetRoute(r *gin.Engine) {
 	r.PUT("/cache/manager", removeCache)
 	r.POST("/cache/manager", showCache)
 	r.POST("/push/time", getPushTime)
+
+	// 配置管理相关路由
+	r.GET("/api/setting/current", getCurrentConfig)
+	r.POST("/api/setting/save", saveConfig)
+	r.POST("/api/setting/add", addConfig)
+	r.DELETE("/api/setting/delete", deleteConfig)
+	r.POST("/api/setting/reset", resetConfig)
+	r.GET("/api/setting/history", getHistory)
+	r.POST("/api/setting/rollback", rollbackConfig)
+	r.DELETE("/api/setting/history/clear", clearHistory)
+	r.DELETE("/api/setting/history/item", deleteHistoryItem)
+
 	toolChecker := NewToolChecker()
 	// 初始化日志处理器
 	logProcessor := NewLogProcessor(toolChecker)
@@ -96,9 +108,15 @@ func getMetrics(h http.Handler) gin.HandlerFunc {
 }
 
 func extraSetting() {
-	metrics.PacketPoolSize.WithLabelValues("3rd_part_input").Set(float64(len(exchange.ThirdPartyDataQueue)))
-	metrics.PacketPoolSize.WithLabelValues("uplink_4_send").Set(float64(len(exchange.UpLinkDataQueue)))
-	metrics.PacketPoolSize.WithLabelValues("jtw_converter_uplink_4_send").Set(float64(len(exchange.JtwConverterUpLinkDataQueue)))
+	for key, value := range exchange.ThirdPartyDataQueuePool {
+		metrics.PacketPoolSize.WithLabelValues(key + "_3rd_part_input").Set(float64(len(value)))
+	}
+	for key, value := range exchange.UpLinkDataQueuePool {
+		metrics.PacketPoolSize.WithLabelValues(key + "_uplink_4_send").Set(float64(len(value)))
+	}
+	for key, value := range exchange.JtwConverterUpLinkDataQueuePool {
+		metrics.PacketPoolSize.WithLabelValues(key + "_jtw_converter_uplink_4_send").Set(float64(len(value)))
+	}
 	metrics.CacheSize.WithLabelValues("all_count").Set(float64(cache.Manager.Count()))
 }
 

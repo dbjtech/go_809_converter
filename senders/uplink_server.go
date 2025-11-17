@@ -3,9 +3,9 @@ package senders
 /*
  * @Author: SimingLiu siming.liu@linketech.cn
  * @Date: 2024-10-19 16:40:46
- * @LastEditors: yangtongbing 1280758415@qq.com
- * @LastEditTime: 2025-02-19 14:29:18
- * @FilePath: senders/uplink_server.go
+ * @LastEditors: SimingLiu siming.liu@linketech.cn
+ * @LastEditTime: 2025-11-14 20:57:23
+ * @FilePath: \go_809_converter\senders\uplink_server.go
  * @Description:
  *
  */
@@ -13,10 +13,11 @@ package senders
 import (
 	"context"
 	"fmt"
-	"go.uber.org/zap"
 	"net"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/dbjtech/go_809_converter/converter"
 	"github.com/dbjtech/go_809_converter/metrics"
@@ -92,68 +93,84 @@ func newUplinkReceiveBuffer() *uplinkReceiveBuffer {
 StartUpLink 本服务连接上级服务。即上行链路
 */
 func StartUpLink(ctx context.Context, wg *sync.WaitGroup) {
-	if wg != nil {
-		wg.Add(1)
-		defer wg.Done()
-	}
-	defer func() {
-		microg.W("exit uplink client connection")
-	}()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			// 开放平台809推送
-			conn := getConnection(ctx, 3)
-			metrics.ConnectCounter.WithLabelValues("uplink_On").Inc()
-			if conn == nil {
-				continue
-			}
-			ok := login(ctx, conn)
-			if !ok {
-				if err := conn.Close(); err != nil {
-					microg.E("Failed to close connection: %v", err)
-				}
-				continue
-			}
-
-			lp := &lastPacket{
-				time:    time.Now(),
-				success: true,
-			}
-			lp.refresh()
-
-			// 新起上下文，独立管理，防止生成很多心跳协程
-			newCtx, newCancel := context.WithCancel(ctx)
-			go makeHeartBeat(newCtx, lp)
-			var newWg sync.WaitGroup
-			newWg.Add(1)
-			go Send(newCtx, conn, lp, &newWg)
-			newWg.Wait()
-			microg.W(ctx, "open platform transform goroutine done.")
-			metrics.ConnectCounter.WithLabelValues("uplink_Off").Inc()
-			conn.Close()
-			newCancel()
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				time.Sleep(3 * time.Second)
-			}
+	// 获取 libs.Environment + ".converter" 下的所有子元素，并判断是否开启
+	configConverter := config.SubDataMap(libs.Environment + ".converter")
+	for key, value := range configConverter {
+		m := value.(map[string]any)
+		enable, ok := m["enable"].(bool)
+		if !ok || !enable {
+			microg.W("uplink %s is disabled", key)
+			continue
 		}
+		go func(ctx context.Context, key string, wg *sync.WaitGroup) {
+			if wg != nil {
+				wg.Add(1)
+				defer wg.Done()
+			}
+			defer func() {
+				microg.W("exit uplink client connection for %s", key)
+			}()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					// 上级平台809推送
+					conn := getConnection(ctx, key, 3)
+					metrics.ConnectCounter.WithLabelValues(key + "_uplink_On").Inc()
+					if conn == nil {
+						time.Sleep(5 * time.Second)
+						microg.W("reconnecting uplink %s", key)
+						continue
+					}
+					ok := login(ctx, conn, key)
+					if !ok {
+						if err := conn.Close(); err != nil {
+							microg.E("Failed to close connection: %v", err)
+						}
+						continue
+					}
+
+					lp := &lastPacket{
+						time:    time.Now(),
+						success: true,
+					}
+					lp.refresh()
+
+					// 新起上下文，独立管理，防止生成很多心跳协程
+					newCtx, newCancel := context.WithCancel(ctx)
+					newCtx = context.WithValue(newCtx, constants.TracerKeyCvtName, key)
+					go makeHeartBeat(newCtx, key, lp)
+					var newWg sync.WaitGroup
+					newWg.Add(1)
+					go Send(newCtx, conn, key, lp, &newWg)
+					newWg.Wait()
+					microg.W(newCtx, "uplink platform transform goroutine done.")
+					metrics.ConnectCounter.WithLabelValues(key + "_uplink_Off").Inc()
+					conn.Close()
+					newCancel()
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						time.Sleep(3 * time.Second)
+					}
+				}
+			}
+		}(ctx, key, wg)
 	}
 }
 
-func login(ctx context.Context, conn net.Conn) bool {
+func login(ctx context.Context, conn net.Conn, cvtName string) bool {
 	upConnectReq := &packet_util.UpConnectReq{
-		UserID:       uint32(config.Int(libs.Environment + ".converter.platformUserId")),
-		Password:     config.String(libs.Environment + ".converter.platformPassword"),
-		DownlinkIP:   config.String(libs.Environment + ".converter.localServerIP"),
-		DownlinkPort: uint16(config.Int(libs.Environment + ".converter.localServerPort")),
+		UserID:       uint32(config.Int(libs.Environment + ".converter." + cvtName + ".platformUserId")),
+		Password:     config.String(libs.Environment + ".converter." + cvtName + ".platformPassword"),
+		DownlinkIP:   config.String(libs.Environment + ".converter." + cvtName + ".localServerIP"),
+		DownlinkPort: uint16(config.Int(libs.Environment + ".converter." + cvtName + ".localServerPort")),
 	}
 	upConnectReqMessage := packet_util.BuildMessagePackage(constants.UP_CONNECT_REQ, upConnectReq)
 	loginData := packet_util.Pack(upConnectReqMessage)
+	conn.SetWriteDeadline(time.Now().Add(getWriteTimeout(cvtName)))
 	conn.Write(loginData)
 	microg.I(ctx, "本客户端连接服务器(上行链路): %x", loginData)
 	err := conn.SetReadDeadline(time.Now().Add(3 * time.Second))
@@ -187,7 +204,7 @@ func login(ctx context.Context, conn net.Conn) bool {
 				time.Sleep(time.Second)
 				return false
 			}
-			exchange.DownLinkVerifyCode = downConnectRsp.VerifyCode
+			exchange.DownLinkVerifyCode.Set(cvtName, downConnectRsp.VerifyCode)
 			microg.I("上行链路登录: OK")
 			return true
 		}
@@ -195,28 +212,48 @@ func login(ctx context.Context, conn net.Conn) bool {
 	return false
 }
 
-func getConnection(ctx context.Context, mostTry int) net.Conn {
+func getConnection(ctx context.Context, uplinkName string, mostTry int) net.Conn {
 	if mostTry <= 0 {
 		microg.E(ctx, "Error connecting: timeout")
 		return nil
 	}
-	host := config.String(libs.Environment + ".converter.govServerIP")
-	port := config.Int(libs.Environment + ".converter.govServerPort")
+	host := config.String(libs.Environment + ".converter." + uplinkName + ".govServerIP")
+	port := config.Int(libs.Environment + ".converter." + uplinkName + ".govServerPort")
 	addr := fmt.Sprintf("%s:%d", host, port)
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		microg.E(ctx, "Error connecting:", err.Error())
 		time.Sleep(1000 * time.Millisecond)
-		return getConnection(ctx, mostTry-1)
+		return getConnection(ctx, uplinkName, mostTry-1)
 	}
+	enableKeepAlive(conn, getKeepAlivePeriod(uplinkName))
 	return conn
 }
 
+func getWriteTimeout(cvtName string) time.Duration {
+	v := config.Int(libs.Environment + ".converter." + cvtName + ".writeTimeoutMs")
+	if v <= 0 {
+		v = 3000
+	}
+	return time.Duration(v) * time.Millisecond
+}
+
+func getKeepAlivePeriod(cvtName string) time.Duration {
+	v := config.Int(libs.Environment + ".converter." + cvtName + ".tcpKeepAliveSeconds")
+	if v <= 0 {
+		v = 30
+	}
+	return time.Duration(v) * time.Second
+}
+
+func enableKeepAlive(conn net.Conn, period time.Duration) {
+	if tcp, ok := conn.(*net.TCPConn); ok {
+		tcp.SetKeepAlive(true)
+		tcp.SetKeepAlivePeriod(period)
+	}
+}
+
 func TransformThirdPartyData(ctx context.Context) {
-	metrics.ConnectCounter.WithLabelValues("trans_consumer_On").Inc()
-	defer func() {
-		metrics.ConnectCounter.WithLabelValues("trans_consumer_Off").Inc()
-	}()
 	convertPool := map[string]func(context.Context, string) []packet_util.MessageWrapper{
 		"S99":  converter.ConvertCarRegister,
 		"S991": converter.ConvertCarInfo,
@@ -224,69 +261,100 @@ func TransformThirdPartyData(ctx context.Context) {
 		"S13":  converter.ConvertRealLocation,
 		"S10":  converter.ConvertOnlineOffline,
 	}
-	isExtended := config.Bool(libs.Environment + ".converter.isExtended")
-	isNormalTcp := config.Bool("normalTcp")
-	isJTWTcp := config.Bool("jtwTcp")
-	for {
-		select {
-		case <-ctx.Done():
-			microg.W("cancel transform third party data queue")
-			return
-		case data := <-exchange.ThirdPartyDataQueue:
-			if gjson.Get(data, "res.ping").String() == "yes" { //心跳报文
-				continue
+	// 获取 libs.Environment + ".converter" 下的所有子元素，并判断是否开启，和是否开启扩展协议
+	configConverter := config.SubDataMap(libs.Environment + ".converter")
+	for key, v := range configConverter {
+		m := v.(map[string]any)
+		enable, ok := m["enable"].(bool)
+		if !ok || !enable {
+			microg.W("3rd Party transform %s is disabled", key)
+			continue
+		}
+		go func(ctx context.Context, key string) {
+			metrics.ConnectCounter.WithLabelValues(key + "_trans_consumer_On").Inc()
+			defer func() {
+				metrics.ConnectCounter.WithLabelValues(key + "_trans_consumer_Off").Inc()
+			}()
+			isExtended := config.Bool(libs.Environment + ".converter." + key + ".isExtended")
+			isNormalTcp := config.Bool("normalTcp")
+			isJTWTcp := config.Bool("jtwTcp")
+			innerCtx := context.WithValue(ctx, constants.TracerKeyCvtName, key)
+			thirdPartyDataQueue := exchange.ThirdPartyDataQueuePool[key]
+			upLinkDataQueue := exchange.UpLinkDataQueuePool[key]
+			jtwUpLinkDataQueue := exchange.JtwConverterUpLinkDataQueuePool[key]
+			if thirdPartyDataQueue == nil {
+				microg.E(ctx, "Third Party Data Queue is nil but should exist")
+				return
 			}
-			traceID := gjson.Get(data, "trace_id").String()
-			if traceID == "" {
-				traceID = string(util.RandUp(8))
-				data, _ = sjson.Set(data, "trace_id", traceID)
-			}
-			newCtx := context.WithValue(ctx, microg.TraceKey, traceID)
-			microg.I(newCtx, "Receive third party data %s", data)
-			packetType := gjson.Get(data, "packet_type").String()
-			if packetType != "" {
-				// 非扩展协议只推送 注册 和 位置
-				if !isExtended && (packetType != "S99" && packetType != "S13") {
-					continue
-				}
-				cvt := convertPool[packetType]
-				if cvt == nil {
-					continue
-				}
-				messageWrappers := cvt(newCtx, data)
-				if len(messageWrappers) != 0 {
-					for _, wrapper := range messageWrappers {
-						if wrapper.TraceID == "" {
+			for {
+				select {
+				case <-innerCtx.Done():
+					microg.W(innerCtx, "cancel transform third party data queue")
+					return
+				case data := <-thirdPartyDataQueue:
+					if gjson.Get(data, "res.ping").String() == "yes" { //心跳报文
+						continue
+					}
+					traceID := gjson.Get(data, "trace_id").String()
+					if traceID == "" {
+						traceID = string(util.RandUp(8))
+						data, _ = sjson.Set(data, "trace_id", traceID)
+					}
+					newCtx := context.WithValue(innerCtx, microg.TraceKey, traceID)
+					microg.I(newCtx, "Receive third party data %s", data)
+					packetType := gjson.Get(data, "packet_type").String()
+					if packetType != "" {
+						// 非扩展协议只推送 注册 和 位置
+						if !isExtended && (packetType != "S99" && packetType != "S13") {
 							continue
 						}
-						if isNormalTcp {
-							if len(exchange.UpLinkDataQueue) >= cap(exchange.UpLinkDataQueue) {
-								dropData := <-exchange.UpLinkDataQueue
-								zapField := zap.String("trace_id", dropData.TraceID)
-								microg.W(zapField, "drop data for full chan")
-								metrics.PacketsDrop.WithLabelValues("_", "up_link").Inc()
-							}
-							exchange.UpLinkDataQueue <- wrapper
+						cvt := convertPool[packetType]
+						if cvt == nil {
+							continue
 						}
-						if isJTWTcp {
-							if len(exchange.JtwConverterUpLinkDataQueue) >= cap(exchange.JtwConverterUpLinkDataQueue) {
-								dropData := <-exchange.JtwConverterUpLinkDataQueue
-								zapField := zap.String("trace_id", dropData.TraceID)
-								microg.W(zapField, "drop data for full chan")
-								metrics.PacketsDrop.WithLabelValues("_", "jtw_converter_up_link").Inc()
+						messageWrappers := cvt(newCtx, data)
+						if len(messageWrappers) != 0 {
+							for _, wrapper := range messageWrappers {
+								if wrapper.TraceID == "" {
+									continue
+								}
+								if isNormalTcp {
+									if len(upLinkDataQueue) >= cap(upLinkDataQueue) {
+										dropData := <-upLinkDataQueue
+										zapField := zap.String("trace_id", dropData.TraceID)
+										microg.W(newCtx, zapField, "drop data for full chan")
+										metrics.PacketsDrop.WithLabelValues(key, "up_link").Inc()
+									}
+									upLinkDataQueue <- wrapper
+								}
+								if isJTWTcp {
+									if len(jtwUpLinkDataQueue) >= cap(jtwUpLinkDataQueue) {
+										dropData := <-jtwUpLinkDataQueue
+										zapField := zap.String("trace_id", dropData.TraceID)
+										microg.W(newCtx, zapField, "drop data for full chan")
+										metrics.PacketsDrop.WithLabelValues(key, "jtw_converter_up_link").Inc()
+									}
+									jtwUpLinkDataQueue <- wrapper
+								}
 							}
-							exchange.JtwConverterUpLinkDataQueue <- wrapper
+						} else {
+							metrics.PacketsDrop.WithLabelValues(key, "data_error").Inc()
 						}
 					}
 				}
 			}
-		}
+		}(ctx, key)
 	}
 }
 
-func makeHeartBeat(ctx context.Context, lp *lastPacket) {
+func makeHeartBeat(ctx context.Context, cvtName string, lp *lastPacket) {
 	// 下级平台应,仅在没有【应用业务数据包】往来的情况下，才每 1min 发送一个心跳包
 	ticker := time.NewTicker(time.Second)
+	upLinkDataQueue := exchange.UpLinkDataQueuePool[cvtName]
+	if upLinkDataQueue == nil {
+		microg.E(ctx, "Can not find up_link data queue")
+		return
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -299,14 +367,14 @@ func makeHeartBeat(ctx context.Context, lp *lastPacket) {
 					TraceID: string(util.RandUp(6)),
 					Message: heartBeatMessage,
 				}
-				exchange.UpLinkDataQueue <- msgWrapper
-				metrics.LinkHeartBeat.WithLabelValues("uplink").Inc()
+				upLinkDataQueue <- msgWrapper
+				metrics.LinkHeartBeat.WithLabelValues(cvtName + "_uplink").Inc()
 			}
 		}
 	}
 }
 
-func Send(ctx context.Context, conn net.Conn, lp *lastPacket, wg *sync.WaitGroup) {
+func Send(ctx context.Context, conn net.Conn, cvtName string, lp *lastPacket, wg *sync.WaitGroup) {
 	defer func() {
 		if wg != nil {
 			wg.Done()
@@ -314,17 +382,27 @@ func Send(ctx context.Context, conn net.Conn, lp *lastPacket, wg *sync.WaitGroup
 		if err := conn.Close(); err != nil {
 			microg.E("Failed to close connection: %v", err)
 		}
+		if err := recover(); err != nil {
+			microg.E(ctx, "send Data Fatal %v", err)
+		}
 	}()
 	ticker := time.NewTicker(time.Second)
+	uplinkDataQueue := exchange.UpLinkDataQueuePool[cvtName]
+	if uplinkDataQueue == nil {
+		microg.E(ctx, "Can not find up_link data queue for %v", cvtName)
+		return
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case msgWrapper := <-exchange.UpLinkDataQueue:
+		case msgWrapper := <-exchange.UpLinkDataQueuePool[cvtName]:
 			newCtx := context.WithValue(context.Background(), microg.TraceKey, msgWrapper.TraceID)
+			newCtx = context.WithValue(newCtx, constants.TracerKeyCvtName, cvtName)
 			data := packet_util.Pack(msgWrapper.Message)
 			if len(data) > 0 {
 				beginSendTime := time.Now()
+				conn.SetWriteDeadline(time.Now().Add(getWriteTimeout(cvtName)))
 				_, err := conn.Write(data)
 				if err != nil {
 					microg.E(newCtx, "Error writing to connection %s ERROR: %s", conn.RemoteAddr().String(), err.Error())

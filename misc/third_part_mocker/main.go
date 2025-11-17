@@ -25,9 +25,9 @@ import (
 )
 
 var schedule = map[string]int{
-	"loop":     1, // 循环次数, -1 表示无限循环
-	"sleep":    2, // 秒
-	"interval": 5, // 毫秒
+	"loop":     1,  // 循环次数, -1 表示无限循环
+	"sleep":    2,  // 秒
+	"interval": 65, // 毫秒
 }
 
 // 车辆注册
@@ -53,8 +53,8 @@ var dataS106 = []string{
 }
 
 var dataS13 = []string{
-	`{"res":{"location":[{"address":"","altitude":512,"car_id":"cfaa51ec416b42b99103b9a73a81a1dd","category":1, 
-"cell_id":0,"clatitude":110224666,"clongitude":374576662,"degree":298,"latitude":110210904,"locate_error":10,"locate_type":1,"longitude":374544756,"mcc":0,"mnc":0,"snr":24,"speed":62,"status":2,"t_type":"ZJ210","tid":"c75926d0b17a4b9283b7b04f9e51b46f","timestamp":1730261855,"type":2}]},"packet_type":"S13","trace_id":"Z\u003estZ5Bp","group_name":""}`,
+	`{"res":{"location":[{"address":"","altitude":512,"car_id":"fa938fa6186448e9aaedfb13f29f959d","category":1, 
+"cell_id":0,"clatitude":110224666,"clongitude":374576662,"degree":298,"latitude":110210904,"locate_error":10,"locate_type":1,"longitude":374544756,"mcc":0,"mnc":0,"snr":24,"speed":62,"status":2,"t_type":"ZJ210","tid":"670a68c9a2d347fc973ba2ffa2ed672f","timestamp":1730261855,"type":2}]},"packet_type":"S13","trace_id":"Z\u003estZ5Bp","group_name":""}`,
 }
 
 func main() {
@@ -73,8 +73,9 @@ func run3rdParty(ctx context.Context) {
 	defer func() {
 		os.Exit(0)
 	}()
-	addr := fmt.Sprintf("%s:%d", config.String(libs.Environment+".converter.localServerIP"),
-		config.Int(libs.Environment+".converter.thirdpartPort"))
+	cvtName := "another"
+	addr := fmt.Sprintf("%s:%d", config.String(libs.Environment+".converter."+cvtName+".localServerIP"),
+		config.Int(libs.Environment+".converter."+cvtName+".thirdpartPort"))
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		panic(err)
@@ -92,11 +93,12 @@ func run3rdParty(ctx context.Context) {
 			default:
 				conn.Write([]byte(v))
 				microg.I("send %s", v)
-				time.Sleep(time.Duration(schedule["interval"]) * time.Millisecond)
+				time.Sleep(time.Duration(schedule["interval"]) * time.Second)
 			}
 		}
 		loop -= 1
 		if loop == 0 {
+			microg.I("exit")
 			return
 		}
 		time.Sleep(time.Duration(schedule["sleep"]) * time.Second)
