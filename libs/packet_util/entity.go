@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -1211,17 +1212,15 @@ func (e EmptyBody) GetDataType() int {
 	return 0
 }
 
-func BuildMessagePackage(businessType uint16, msgBody MessageWithBody) Message {
-	platformId := config.Int(libs.Environment + ".converter.platformId")
-	version := config.String(libs.Environment + ".converter.protocolVersion")
-	cryptoPacketTypes := config.Ints(libs.Environment + ".converter.cryptoPacketTypes")
-	openCrypto := config.Bool(libs.Environment + ".converter.openCrypto")
+func BuildMessagePackage(ctx context.Context, businessType uint16, msgBody MessageWithBody) Message {
+	cvtName := ctx.Value(constants.TracerKeyCvtName).(string)
+	platformId := config.Int(libs.Environment + ".converter." + cvtName + ".platformId")
+	version := config.String(libs.Environment + ".converter." + cvtName + ".protocolVersion")
+	cryptoPacketTypes := config.Ints(libs.Environment + ".converter." + cvtName + ".cryptoPacketTypes")
+	openCrypto := config.Bool(libs.Environment + ".converter." + cvtName + ".openCrypto")
 	if !openCrypto && len(cryptoPacketTypes) > 0 {
-		for _, wantEncryptType := range cryptoPacketTypes {
-			if int(businessType) == wantEncryptType {
-				openCrypto = true
-				break
-			}
+		if slices.Contains(cryptoPacketTypes, int(businessType)) {
+			openCrypto = true
 		}
 	}
 	header := NewHeader()
@@ -1229,19 +1228,19 @@ func BuildMessagePackage(businessType uint16, msgBody MessageWithBody) Message {
 	header.MsgID = businessType
 	header.MsgGNSSCenterID = uint32(platformId)
 	versionSeg := strings.Split(version, ".")
-	for i := 0; i < len(versionSeg); i++ {
+	for i := range versionSeg {
 		q, _ := strconv.ParseUint(versionSeg[i], 10, 8)
 		header.VersionFlag[i] = byte(q)
 	}
 	if openCrypto {
 		header.EncryptionFlag = 1
 	}
-	header.EncryptKey = uint32(config.Int(libs.Environment + ".converter.encryptKey"))
+	header.EncryptKey = uint32(config.Int(libs.Environment + ".converter." + cvtName + ".encryptKey"))
 	message := Message{}
 	message.Header = header
 	body := msgBody.ToBytes()
 	if header.EncryptionFlag == 1 {
-		body = util.SimpleEncrypt(int(header.EncryptKey), config.Int(libs.Environment+".converter.M1"), config.Int(libs.Environment+".converter.IA1"), config.Int(libs.Environment+".converter.IC1"), body)
+		body = util.SimpleEncrypt(int(header.EncryptKey), config.Int(libs.Environment+".converter."+cvtName+".M1"), config.Int(libs.Environment+".converter."+cvtName+".IA1"), config.Int(libs.Environment+".converter."+cvtName+".IC1"), body)
 	}
 	message.Payload = body
 	message.Header.MsgLength = uint32(len(message.Payload))

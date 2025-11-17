@@ -163,7 +163,7 @@ func solveJtwConverterDownLink(ctx context.Context, msgID uint16, messageBody pa
 
 func keepJtwConverterDownLinkAlive(ctx context.Context, conn net.Conn) {
 	body := packet_util.EmptyBody{}
-	message := packet_util.BuildMessagePackage(constants.DOWN_LINKTEST_RSP, body)
+	message := packet_util.BuildMessagePackage(ctx, constants.DOWN_LINKTEST_RSP, body)
 	data := packet_util.Pack(message)
 	if len(data) > 0 {
 		_, err := conn.Write(data)
@@ -186,7 +186,7 @@ func solveJtwConverterDownLinkLogin(ctx context.Context, conn net.Conn, messageB
 	loginResult := &packet_util.DownConnectRsp{
 		Result: result,
 	}
-	message := packet_util.BuildMessagePackage(constants.DOWN_CONNECT_RSP, loginResult)
+	message := packet_util.BuildMessagePackage(ctx, constants.DOWN_CONNECT_RSP, loginResult)
 	data := packet_util.Pack(message)
 	if len(data) > 0 {
 		_, err := conn.Write(data)

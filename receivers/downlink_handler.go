@@ -237,7 +237,7 @@ func solveDownLink(ctx context.Context, msgID uint16, messageBody packet_util.Me
 
 func keepDownLinkAlive(ctx context.Context, conn net.Conn) {
 	body := packet_util.EmptyBody{}
-	message := packet_util.BuildMessagePackage(constants.DOWN_LINKTEST_RSP, body)
+	message := packet_util.BuildMessagePackage(ctx, constants.DOWN_LINKTEST_RSP, body)
 	data := packet_util.Pack(message)
 	if len(data) > 0 {
 		_, err := conn.Write(data)
@@ -260,7 +260,7 @@ func solveDownLinkLogin(ctx context.Context, conn net.Conn, messageBody packet_u
 	loginResult := &packet_util.DownConnectRsp{
 		Result: result,
 	}
-	message := packet_util.BuildMessagePackage(constants.DOWN_CONNECT_RSP, loginResult)
+	message := packet_util.BuildMessagePackage(ctx, constants.DOWN_CONNECT_RSP, loginResult)
 	data := packet_util.Pack(message)
 	if len(data) > 0 {
 		_, err := conn.Write(data)

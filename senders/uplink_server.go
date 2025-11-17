@@ -168,7 +168,7 @@ func login(ctx context.Context, conn net.Conn, cvtName string) bool {
 		DownlinkIP:   config.String(libs.Environment + ".converter." + cvtName + ".localServerIP"),
 		DownlinkPort: uint16(config.Int(libs.Environment + ".converter." + cvtName + ".localServerPort")),
 	}
-	upConnectReqMessage := packet_util.BuildMessagePackage(constants.UP_CONNECT_REQ, upConnectReq)
+	upConnectReqMessage := packet_util.BuildMessagePackage(ctx, constants.UP_CONNECT_REQ, upConnectReq)
 	loginData := packet_util.Pack(upConnectReqMessage)
 	conn.SetWriteDeadline(time.Now().Add(getWriteTimeout(cvtName)))
 	conn.Write(loginData)
@@ -362,7 +362,7 @@ func makeHeartBeat(ctx context.Context, cvtName string, lp *lastPacket) {
 		case <-ticker.C:
 			if lp.past(30 * time.Second) {
 				heartBeatBody := packet_util.EmptyBody{}
-				heartBeatMessage := packet_util.BuildMessagePackage(constants.UP_LINKTEST_REQ, heartBeatBody)
+				heartBeatMessage := packet_util.BuildMessagePackage(ctx, constants.UP_LINKTEST_REQ, heartBeatBody)
 				msgWrapper := packet_util.MessageWrapper{
 					TraceID: string(util.RandUp(6)),
 					Message: heartBeatMessage,

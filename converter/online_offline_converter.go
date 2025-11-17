@@ -110,7 +110,7 @@ func ConvertOnlineOffline(ctx context.Context, jsonData string) (mws []packet_ut
 		TraceID: s10.TraceID,
 		Cnum:    cnum,
 		Sn:      sn,
-		Message: packet_util.BuildMessagePackage(constants.UP_WARN_MSG, warnMsgExtends),
+		Message: packet_util.BuildMessagePackage(ctx, constants.UP_WARN_MSG, warnMsgExtends),
 	}
 	mws = append(mws, mw)
 	return

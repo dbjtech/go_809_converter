@@ -92,7 +92,7 @@ func jtwConverterLogin(ctx context.Context, conn net.Conn, cvtName string) bool 
 		DownlinkIP:   config.String(libs.Environment + ".converter." + cvtName + ".jtw809ConverterDownLinkIp"),
 		DownlinkPort: uint16(config.Int(libs.Environment + ".converter." + cvtName + ".jtw809ConverterDownLinkPort")),
 	}
-	upConnectReqMessage := packet_util.BuildMessagePackage(constants.UP_CONNECT_REQ, upConnectReq)
+	upConnectReqMessage := packet_util.BuildMessagePackage(ctx, constants.UP_CONNECT_REQ, upConnectReq)
 	loginData := packet_util.Pack(upConnectReqMessage)
 	conn.SetWriteDeadline(time.Now().Add(getWriteTimeout(cvtName)))
 	conn.Write(loginData)
@@ -164,7 +164,7 @@ func makeJtwConverterHeartBeat(ctx context.Context, lp *lastPacket, cvtName stri
 		case <-ticker.C:
 			if lp.past(30 * time.Second) {
 				heartBeatBody := packet_util.EmptyBody{}
-				heartBeatMessage := packet_util.BuildMessagePackage(constants.UP_LINKTEST_REQ, heartBeatBody)
+				heartBeatMessage := packet_util.BuildMessagePackage(ctx, constants.UP_LINKTEST_REQ, heartBeatBody)
 				msgWrapper := packet_util.MessageWrapper{
 					TraceID: string(util.RandUp(6)),
 					Message: heartBeatMessage,

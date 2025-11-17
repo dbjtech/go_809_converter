@@ -137,7 +137,7 @@ dlk:
 				continue
 			}
 			downConnectReq := &packet_util.DownConnectReq{VerifyCode: verifyCode}
-			downConnectReqMessage := packet_util.BuildMessagePackage(constants.DOWN_CONNECT_REQ, downConnectReq)
+			downConnectReqMessage := packet_util.BuildMessagePackage(ctx, constants.DOWN_CONNECT_REQ, downConnectReq)
 			conn.Write(packet_util.Pack(downConnectReqMessage))
 
 			err = conn.SetReadDeadline(time.Now().Add(time.Second))
@@ -185,7 +185,7 @@ dlk:
 				case <-ticker.C:
 					if lp.past(time.Minute) {
 						heartBeatBody := packet_util.EmptyBody{}
-						heartBeatMessage := packet_util.BuildMessagePackage(constants.DOWN_LINKTEST_REQ, heartBeatBody)
+						heartBeatMessage := packet_util.BuildMessagePackage(ctx, constants.DOWN_LINKTEST_REQ, heartBeatBody)
 						raw := packet_util.Pack(heartBeatMessage)
 						conn.Write(raw)
 						lp.refresh()
@@ -277,7 +277,7 @@ func solveUplinkPacket(ctx context.Context, conn net.Conn) {
 						if message.Header.MsgID != constants.UP_CONNECT_REQ { // 下级节点的登录请求
 							microg.E("first packet should be login")
 							loginRespBody := packet_util.UpConnectResp{Result: constants.UPLINK_CONNECT_USER_NEED_REGISTER}
-							loginRespMessage := packet_util.BuildMessagePackage(constants.UP_CONNECT_RSP, &loginRespBody)
+							loginRespMessage := packet_util.BuildMessagePackage(ctx, constants.UP_CONNECT_RSP, &loginRespBody)
 							data := packet_util.Pack(loginRespMessage)
 							conn.Write(data)
 							return
@@ -301,27 +301,27 @@ func checkLogin(ctx context.Context, message packet_util.Message, conn net.Conn)
 	messageBody := packet_util.UnpackMsgBody(ctx, message)
 	checkStatus := constants.UPLINK_CONNECT_SUCCESS
 	if messageBody == nil {
-		microg.E("login packet unpack failed")
+		microg.E(ctx, "login packet unpack failed")
 		checkStatus = constants.UPLINK_CONNECT_OTHER_ERROR
 	}
 	upConnectReq := messageBody.(*packet_util.UpConnectReq)
-	microg.I("Uplink login: %s", upConnectReq.String())
+	microg.I(ctx, "Uplink login: %s", upConnectReq.String())
 	if upConnectReq.Password != config.String(libs.Environment+".converter.some.platformPassword") {
-		microg.E("Invalid password")
+		microg.E(ctx, "Invalid password")
 		checkStatus = constants.UPLINK_CONNECT_PASSWORD_ERROR
 	}
 	if upConnectReq.UserID != uint32(config.Int(libs.Environment+".converter.some.platformUserId")) {
-		microg.E("Invalid userId")
+		microg.E(ctx, "Invalid userId")
 		checkStatus = constants.UPLINK_CONNECT_USER_NEED_REGISTER
 	}
 	loginRespBody := packet_util.UpConnectResp{Result: checkStatus, VerifyCode: verifyCode}
-	loginRespMessage := packet_util.BuildMessagePackage(constants.UP_CONNECT_RSP, &loginRespBody)
+	loginRespMessage := packet_util.BuildMessagePackage(ctx, constants.UP_CONNECT_RSP, &loginRespBody)
 	data := packet_util.Pack(loginRespMessage)
 	conn.Write(data)
-	microg.I("Send  %x", data)
-	microg.I(loginRespMessage.String())
+	microg.I(ctx, "Send  %x", data)
+	microg.I(ctx, loginRespMessage.String())
 	downlinkAddr := fmt.Sprintf("%s:%d", upConnectReq.DownlinkIP, upConnectReq.DownlinkPort)
-	microg.I("try to connect to downlink server at %s", downlinkAddr)
+	microg.I(ctx, "try to connect to downlink server at %s", downlinkAddr)
 	go runDownlink(ctx, downlinkAddr)
 	return checkStatus == constants.UPLINK_CONNECT_SUCCESS
 }

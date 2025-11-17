@@ -111,7 +111,8 @@ func ConvertCarRegister(ctx context.Context, jsonData string) (mws []packet_util
 		if color > 0 {
 			plateColor = constants.VehicleColor(color)
 		}
-		platformId := config.String(libs.Environment + ".converter.platformId")
+		cvtName := ctx.Value(constants.TracerKeyCvtName).(string)
+		platformId := config.String(libs.Environment + ".converter." + cvtName + ".platformId")
 		vehicleRegister := &packet_util.UpExgMsgRegister{}
 		vehicleRegister.VehicleNo = name
 		vehicleRegister.VehicleColor = plateColor
@@ -130,7 +131,7 @@ func ConvertCarRegister(ctx context.Context, jsonData string) (mws []packet_util
 			TraceID: s99.TraceID,
 			Cnum:    name,
 			Sn:      sn,
-			Message: packet_util.BuildMessagePackage(constants.UP_EXG_MSG, vehicleRegister),
+			Message: packet_util.BuildMessagePackage(ctx, btype, vehicleRegister),
 		}
 		mws = append(mws, mw)
 	}

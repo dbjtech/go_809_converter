@@ -93,7 +93,7 @@ func ConvertCarExtraInfoToS106(ctx context.Context, jsonData string) (mws []pack
 		TraceID: s106.TraceID,
 		Cnum:    cnum,
 		Sn:      sn,
-		Message: packet_util.BuildMessagePackage(constants.UP_EXG_MSG, carExtra),
+		Message: packet_util.BuildMessagePackage(ctx, btype, carExtra),
 	}
 	mws = append(mws, mw)
 	return
