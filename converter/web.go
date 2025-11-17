@@ -35,15 +35,15 @@ func SetRoute(r *gin.Engine) {
 	r.POST("/push/time", getPushTime)
 
 	// 配置管理相关路由
-	r.GET("/api/setting/current", getCurrentConfig)
-	r.POST("/api/setting/save", saveConfig)
-	r.POST("/api/setting/add", addConfig)
-	r.DELETE("/api/setting/delete", deleteConfig)
-	r.POST("/api/setting/reset", resetConfig)
-	r.GET("/api/setting/history", getHistory)
-	r.POST("/api/setting/rollback", rollbackConfig)
-	r.DELETE("/api/setting/history/clear", clearHistory)
-	r.DELETE("/api/setting/history/item", deleteHistoryItem)
+	r.GET("/setting/current", getCurrentConfig)
+	r.POST("/setting/save", saveConfig)
+	r.POST("/setting/add", addConfig)
+	r.DELETE("/setting/delete", deleteConfig)
+	r.POST("/setting/reset", resetConfig)
+	r.GET("/setting/history", getHistory)
+	r.POST("/setting/rollback", rollbackConfig)
+	r.DELETE("/setting/history/clear", clearHistory)
+	r.DELETE("/setting/history/item", deleteHistoryItem)
 
 	toolChecker := NewToolChecker()
 	// 初始化日志处理器

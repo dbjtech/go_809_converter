@@ -7,7 +7,18 @@
  * @Description: 配置管理页面JavaScript逻辑
  * 
  */
-
+// API基础URL
+//获取当前url完整路径
+let url = window.location.href;
+//从 /static处截断，前面部分就是根路径
+const staticIndex = url.indexOf('/static');
+let API_BASE = '';
+// 如果 staticIndex 等于 -1 则返回当前文件的目录,即最后一个 / 所在位置
+if (staticIndex === -1) {
+    API_BASE = url.substring(0, url.lastIndexOf('/'));
+} else {
+    API_BASE = url.substring(0, staticIndex);
+}
 // 全局变量
 let currentConfig = {};
 let originalConfig = {};
@@ -393,7 +404,7 @@ function saveConfig() {
     const nestedConfig = unflattenToNested(finalFlat);
     
     $.ajax({
-        url: '/api/setting/save',
+        url: `${API_BASE}/setting/save`,
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({
@@ -437,7 +448,7 @@ function resetConfig() {
     }
     
     $.ajax({
-        url: '/api/setting/reset',
+        url: `${API_BASE}/setting/reset`,
         method: 'POST',
         success: function(data) {
             if (data.success) {
@@ -461,7 +472,7 @@ function deleteConfigGroup(groupName) {
     }
 
     $.ajax({
-        url: '/api/setting/delete',
+        url: `${API_BASE}/setting/delete`,
         method: 'DELETE',
         contentType: 'application/json',
         data: JSON.stringify({
@@ -498,7 +509,7 @@ function deleteConfigItem(key) {
     }
     
     $.ajax({
-        url: '/api/setting/delete',
+        url: `${API_BASE}/setting/delete`,
         method: 'DELETE',
         contentType: 'application/json',
         data: JSON.stringify({
@@ -578,7 +589,7 @@ function addNewConfig() {
     };
     
     $.ajax({
-        url: '/api/setting/save',
+        url: `${API_BASE}/setting/save`,
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({
@@ -659,7 +670,7 @@ function loadConfigTree() {
 // 加载历史记录
 function loadHistory() {
     $.ajax({
-        url: '/api/setting/history',
+        url: `${API_BASE}/setting/history`,
         method: 'GET',
         success: function(data) {
             if (data.success) {
@@ -734,7 +745,7 @@ function rollbackConfig(timestamp) {
     }
     
     $.ajax({
-        url: '/api/setting/rollback',
+        url: `${API_BASE}/setting/rollback`,
         method: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({
@@ -763,7 +774,7 @@ function clearHistory() {
     }
     
     $.ajax({
-        url: '/api/setting/clear_history',
+        url: `${API_BASE}/setting/clear_history`,
         method: 'POST',
         success: function(data) {
             if (data.success) {
@@ -824,7 +835,7 @@ function updateEnvLabels() {
 // 恢复并增强：加载当前配置（含环境标签更新）
 function loadCurrentConfig() {
     $.ajax({
-        url: '/api/setting/current',
+        url: `${API_BASE}/setting/current`,
         method: 'GET',
         success: function(data) {
             if (data.success) {
