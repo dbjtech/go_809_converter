@@ -72,4 +72,4 @@
 
 ### 提示
 
-如果需要使用docker部署，最好是外挂 config/configuration.toml 和 config/config.history 
+如果需要使用docker部署，最好是外挂 config/configuration.toml、config/configuration.toml.backup 和 config/config.history 

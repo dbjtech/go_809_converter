@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dbjtech/go_809_converter/libs"
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/config/v2"
 	"github.com/linketech/microg/v4"
@@ -89,10 +90,21 @@ type HistoryItem struct {
 	FullConfig map[string]any `json:"full_config"`
 }
 
-const (
-	configHistoryFile = "config/config.history"
-	configBackupFile  = "config/configuration.toml.backup"
-)
+func currentConfigPath() string {
+	return libs.GetConfigPath(libs.ConfigType, libs.ConfigFile)
+}
+
+func historyFilePath() string {
+	return filepath.Join(filepath.Dir(currentConfigPath()), "config.history")
+}
+
+func backupFilePath() string {
+	return currentConfigPath() + ".backup"
+}
+
+func templateFilePath() string {
+	return filepath.Join(filepath.Dir(currentConfigPath()), "configuration.toml.template")
+}
 
 // getCurrentConfig 获取当前配置
 func getCurrentConfig(c *gin.Context) {
@@ -406,7 +418,7 @@ func rollbackConfig(c *gin.Context) {
 
 // clearHistory 清空历史记录
 func clearHistory(c *gin.Context) {
-	if err := os.Remove(configHistoryFile); err != nil && !os.IsNotExist(err) {
+	if err := os.Remove(historyFilePath()); err != nil && !os.IsNotExist(err) {
 		c.JSON(http.StatusInternalServerError, SettingResponse{
 			Success: false,
 			Message: "清空历史记录失败: " + err.Error(),
@@ -451,7 +463,7 @@ func flattenConfig(data any, prefix string) map[string]any {
 
 // backupCurrentConfig 备份当前配置
 func backupCurrentConfig() error {
-	configFile := "config/configuration.toml"
+	configFile := currentConfigPath()
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		return nil // 配置文件不存在，无需备份
 	}
@@ -461,12 +473,12 @@ func backupCurrentConfig() error {
 		return err
 	}
 
-	return os.WriteFile(configBackupFile, input, 0644)
+	return os.WriteFile(backupFilePath(), input, 0644)
 }
 
 // saveConfigToFile 保存配置到文件
 func saveConfigToFile() error {
-	configFile := "config/configuration.toml"
+	configFile := currentConfigPath()
 	configData := config.Data()
 	// 对 configData 进行深度复制，避免修改原始数据
 	configDataBackup := make(map[string]any)
@@ -598,8 +610,8 @@ func removeConfigKey(key string) error {
 
 // resetToDefaultConfig 重置为默认配置
 func resetToDefaultConfig() error {
-	templateFile := "config/configuration.toml.template"
-	configFile := "config/configuration.toml"
+	templateFile := templateFilePath()
+	configFile := currentConfigPath()
 
 	if _, err := os.Stat(templateFile); os.IsNotExist(err) {
 		return fmt.Errorf("默认配置模板文件不存在: %s", templateFile)
@@ -622,7 +634,7 @@ func resetToDefaultConfig() error {
 // recordHistory 记录历史
 func recordHistory(operation map[string]interface{}, fullConfig map[string]interface{}) error {
 	// 确保目录存在
-	if err := os.MkdirAll(filepath.Dir(configHistoryFile), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(historyFilePath()), 0755); err != nil {
 		return err
 	}
 
@@ -640,7 +652,7 @@ func recordHistory(operation map[string]interface{}, fullConfig map[string]inter
 	}
 
 	// 追加到历史文件
-	file, err := os.OpenFile(configHistoryFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	file, err := os.OpenFile(historyFilePath(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
@@ -654,11 +666,11 @@ func recordHistory(operation map[string]interface{}, fullConfig map[string]inter
 func loadHistory() ([]HistoryItem, error) {
 	var history []HistoryItem
 
-	if _, err := os.Stat(configHistoryFile); os.IsNotExist(err) {
+	if _, err := os.Stat(historyFilePath()); os.IsNotExist(err) {
 		return history, nil // 文件不存在，返回空历史
 	}
 
-	file, err := os.Open(configHistoryFile)
+	file, err := os.Open(historyFilePath())
 	if err != nil {
 		return nil, err
 	}
@@ -709,11 +721,11 @@ func deleteHistoryItem(c *gin.Context) {
 
 	// 读取历史文件并过滤
 	var lines []string
-	if _, err := os.Stat(configHistoryFile); os.IsNotExist(err) {
+	if _, err := os.Stat(historyFilePath()); os.IsNotExist(err) {
 		c.JSON(http.StatusNotFound, SettingResponse{Success: false, Message: "历史记录文件不存在"})
 		return
 	}
-	data, err := os.ReadFile(configHistoryFile)
+	data, err := os.ReadFile(historyFilePath())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, SettingResponse{Success: false, Message: "读取历史记录失败"})
 		return
@@ -732,7 +744,7 @@ func deleteHistoryItem(c *gin.Context) {
 		}
 	}
 	// 重写文件
-	if err := os.WriteFile(configHistoryFile, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+	if err := os.WriteFile(historyFilePath(), []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
 		c.JSON(http.StatusInternalServerError, SettingResponse{Success: false, Message: "删除历史记录失败"})
 		return
 	}

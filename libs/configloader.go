@@ -4,16 +4,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/gookit/config/v2"
-	"github.com/gookit/config/v2/toml"
-	"github.com/gookit/config/v2/yaml"
-	"github.com/linketech/microg/v4"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/gookit/config/v2"
+	"github.com/gookit/config/v2/toml"
+	"github.com/gookit/config/v2/yaml"
+	"github.com/linketech/microg/v4"
 )
 
 type configType string
@@ -79,6 +80,10 @@ func getConfigPath(configType string, configFile string) string {
 		break
 	}
 	return configFilePath
+}
+
+func GetConfigPath(configType string, configFile string) string {
+	return getConfigPath(configType, configFile)
 }
 
 // IsShowSQL 是否展示SQL语句到日志文件
