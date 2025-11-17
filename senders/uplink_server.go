@@ -123,7 +123,9 @@ func StartUpLink(ctx context.Context, wg *sync.WaitGroup) {
 						microg.W("reconnecting uplink %s", key)
 						continue
 					}
-					ok := login(ctx, conn, key)
+					// 新起上下文，独立管理，防止生成很多心跳协程
+					newCtx := context.WithValue(ctx, constants.TracerKeyCvtName, key)
+					ok := login(newCtx, conn, key)
 					if !ok {
 						if err := conn.Close(); err != nil {
 							microg.E("Failed to close connection: %v", err)
@@ -137,9 +139,7 @@ func StartUpLink(ctx context.Context, wg *sync.WaitGroup) {
 					}
 					lp.refresh()
 
-					// 新起上下文，独立管理，防止生成很多心跳协程
-					newCtx, newCancel := context.WithCancel(ctx)
-					newCtx = context.WithValue(newCtx, constants.TracerKeyCvtName, key)
+					newCtx, newCancel := context.WithCancel(newCtx)
 					go makeHeartBeat(newCtx, key, lp)
 					var newWg sync.WaitGroup
 					newWg.Add(1)
