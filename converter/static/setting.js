@@ -111,14 +111,15 @@ $(document).ready(function() {
 
 // 初始化页面
 function initializePage() {
-    // 标签页切换事件
-    $('.tab').click(function() {
+    // 标签页切换事件（避免重复绑定）
+    $('.tab').off('click.tabSwitch').on('click.tabSwitch', function() {
         const tabId = $(this).data('tab');
         switchTab(tabId);
     });
 
-    // 监听配置项变化（按类型精确比较，避免改回原值仍被标注）
-    $(document).on('input change', '.config-input', function() {
+    // 监听配置项变化（按类型精确比较，避免重复绑定）
+    $(document).off('input.configInputChange change.configInputChange')
+        .on('input.configInputChange change.configInputChange', '.config-input', function() {
         const key = $(this).data('key');
         const originalValue = originalConfig[key];
         const rawInput = $(this).val();
@@ -136,6 +137,29 @@ function initializePage() {
         }
         
         updateConfigStatus();
+    });
+
+    $(document).off('click.togglePassword').on('click.togglePassword', '.toggle-password', function(e) {
+        e.preventDefault();
+        const $btn = $(this);
+        const $wrapper = $btn.closest('.password-wrapper');
+        const $old = $wrapper.find('input.config-input');
+        const isPassword = $old.attr('type') === 'password';
+        const newType = isPassword ? 'text' : 'password';
+        const $new = $('<input>');
+        $new.attr('type', newType);
+        $new.attr('class', $old.attr('class'));
+        $new.attr('data-key', $old.attr('data-key'));
+        $new.val($old.val());
+        const formAttr = $old.attr('form');
+        if (formAttr) $new.attr('form', formAttr);
+        const ac = $old.attr('autocomplete') || (newType === 'password' ? 'new-password' : 'off');
+        $new.attr('autocomplete', ac);
+        $old.replaceWith($new);
+        const visible = !isPassword;
+        $btn.attr('data-visible', visible ? 'true' : 'false');
+        $btn.text(visible ? '🙈' : '👁');
+        $btn.attr('title', visible ? '隐藏' : '显示');
     });
 }
 
@@ -322,6 +346,7 @@ function createConfigItem(key, value) {
     
     let inputElement;
     const isCryptoPacket = displayKey === 'cryptoPacket' || (typeof key === 'string' && key.endsWith('.cryptoPacket'));
+    const isSensitive = /password/i.test(displayKey);
     if (isCryptoPacket) {
         let textValue = '';
         if (Array.isArray(value)) {
@@ -340,7 +365,16 @@ function createConfigItem(key, value) {
     } else if (valueType === 'number') {
         inputElement = `<input type="number" class="config-input" data-key="${key}" value="${value}">`;
     } else {
-        inputElement = `<input type="text" class="config-input" data-key="${key}" value="${value}">`;
+        if (isSensitive) {
+            inputElement = `
+                <span class="password-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
+                    <input type="password" class="config-input" data-key="${key}" value="${value}" form="config-form" autocomplete="new-password">
+                    <button type="button" class="toggle-password" data-visible="false" title="显示/隐藏">🙈</button>
+                </span>
+            `;
+        } else {
+            inputElement = `<input type="text" class="config-input" data-key="${key}" value="${value}">`;
+        }
     }
     
     $item.html(`
