@@ -11,17 +11,18 @@ package converter
  */
 
 import (
-	"bufio"
-	"encoding/json"
-	"fmt"
-	"maps"
-	"net/http"
-	"os"
-	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
+    "bufio"
+    "encoding/json"
+    "fmt"
+    "maps"
+    "net/http"
+    "os"
+    "path/filepath"
+    "math"
+    "sort"
+    "strconv"
+    "strings"
+    "time"
 
 	"github.com/dbjtech/go_809_converter/libs"
 	"github.com/gin-gonic/gin"
@@ -143,9 +144,10 @@ func saveConfig(c *gin.Context) {
 		microg.W("Failed to record history: %v", err)
 	}
 
-	// 更新配置
-	// 将嵌套结构扁平化后再写入配置
-	flatReq := flattenConfig(req.Config, "")
+    if strings.ToLower(strings.TrimSpace(req.Operation)) == "add_subproject" {
+        req.Config = ensureAddSubProjectDefaults(req.Config)
+    }
+    flatReq := flattenConfig(req.Config, "")
 	for key, value := range flatReq {
 		if err := config.Set(key, value, true); err != nil {
 			c.JSON(http.StatusInternalServerError, SettingResponse{
@@ -554,28 +556,54 @@ func buildTOMLContent(data map[string]any) string {
 
 // formatTOMLValue 格式化TOML值
 func formatTOMLValue(value any) string {
-	switch v := value.(type) {
-	case string:
-		return fmt.Sprintf(`"%s"`, v)
-	case bool:
-		return strconv.FormatBool(v)
-	case int, int32, int64:
-		return fmt.Sprintf("%d", v)
-	case float32, float64:
-		return fmt.Sprintf("%g", v)
-	case []any:
-		var items []string
-		for _, item := range v {
-			items = append(items, formatTOMLValue(item))
-		}
-		return fmt.Sprintf("[%s]", strings.Join(items, ", "))
-	case map[string]any:
-		// 嵌套的map不应该在这里处理，它们应该作为独立的段
-		// 如果到了这里，说明有配置结构问题，我们跳过它
-		return `""`
-	default:
-		return fmt.Sprintf(`"%v"`, v)
-	}
+    switch v := value.(type) {
+    case string:
+        return fmt.Sprintf(`"%s"`, v)
+    case bool:
+        return strconv.FormatBool(v)
+    case int, int32, int64:
+        return fmt.Sprintf("%d", v)
+    case float32:
+        return formatFloatNoSci(float64(v))
+    case float64:
+        return formatFloatNoSci(v)
+    case json.Number:
+        s := v.String()
+        if strings.ContainsAny(s, "eE") {
+            if f, err := v.Float64(); err == nil {
+                return formatFloatNoSci(f)
+            }
+        }
+        return s
+    case []any:
+        var items []string
+        for _, item := range v {
+            items = append(items, formatTOMLValue(item))
+        }
+        return fmt.Sprintf("[%s]", strings.Join(items, ", "))
+    case map[string]any:
+        // 嵌套的map不应该在这里处理，它们应该作为独立的段
+        // 如果到了这里，说明有配置结构问题，我们跳过它
+        return `""`
+    default:
+        return fmt.Sprintf(`"%v"`, v)
+    }
+}
+
+func formatFloatNoSci(f float64) string {
+    if math.IsNaN(f) || math.IsInf(f, 0) {
+        return "0"
+    }
+    if math.Abs(f-math.Round(f)) < 1e-9 {
+        return strconv.FormatInt(int64(math.Round(f)), 10)
+    }
+    s := strconv.FormatFloat(f, 'f', 6, 64)
+    s = strings.TrimRight(s, "0")
+    s = strings.TrimRight(s, ".")
+    if s == "" {
+        return "0"
+    }
+    return s
 }
 
 // removeConfigKey 删除配置键
@@ -749,4 +777,46 @@ func deleteHistoryItem(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, SettingResponse{Success: true, Message: "历史记录已删除"})
+}
+func ensureAddSubProjectDefaults(cfg map[string]any) map[string]any {
+    m := cfg
+    for envKey, envVal := range m {
+        envMap, ok := envVal.(map[string]any)
+        if !ok {
+            continue
+        }
+        convVal, ok := envMap["converter"]
+        if !ok {
+            continue
+        }
+        convMap, ok := convVal.(map[string]any)
+        if !ok {
+            continue
+        }
+        for nodeKey, nodeVal := range convMap {
+            nodeMap, ok := nodeVal.(map[string]any)
+            if !ok {
+                continue
+            }
+            defaults := map[string]any{
+                "cryptoPacket":            []any{},
+                "extendVersion":           true,
+                "jtw809ConverterDownLinkIp":   "127.0.0.1",
+                "jtw809ConverterDownLinkPort": int64(1302),
+                "jtw809ConverterIp":           "127.0.0.1",
+                "jtw809ConverterPort":         int64(1311),
+                "thirdpartPort":           int64(11223),
+                "useLocationInterval":     false,
+            }
+            for k, v := range defaults {
+                if _, exists := nodeMap[k]; !exists {
+                    nodeMap[k] = v
+                }
+            }
+            convMap[nodeKey] = nodeMap
+        }
+        envMap["converter"] = convMap
+        m[envKey] = envMap
+    }
+    return m
 }
