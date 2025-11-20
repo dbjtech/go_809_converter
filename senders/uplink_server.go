@@ -130,6 +130,8 @@ func StartUpLink(ctx context.Context, wg *sync.WaitGroup) {
 						if err := conn.Close(); err != nil {
 							microg.E("Failed to close connection: %v", err)
 						}
+						// 登录失败 5秒后重试
+						time.Sleep(5 * time.Second)
 						continue
 					}
 
