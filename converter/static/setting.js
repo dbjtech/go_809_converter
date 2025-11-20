@@ -63,7 +63,7 @@ function flattenObject(obj, prefix = '') {
 }
 
 // 页面加载完成后初始化
-$(document).ready(function() {
+$(document).ready(function () {
     initializePage();
     loadCurrentConfig();
     loadConfigTree();
@@ -103,7 +103,7 @@ function valuesEqualByKey(key, originalValue, rawInputValue) {
 }
 
 // 页面加载完成后初始化
-$(document).ready(function() {
+$(document).ready(function () {
     initializePage();
     loadCurrentConfig();
     loadConfigTree();
@@ -112,34 +112,34 @@ $(document).ready(function() {
 // 初始化页面
 function initializePage() {
     // 标签页切换事件（避免重复绑定）
-    $('.tab').off('click.tabSwitch').on('click.tabSwitch', function() {
+    $('.tab').off('click.tabSwitch').on('click.tabSwitch', function () {
         const tabId = $(this).data('tab');
         switchTab(tabId);
     });
 
     // 监听配置项变化（按类型精确比较，避免重复绑定）
     $(document).off('input.configInputChange change.configInputChange')
-        .on('input.configInputChange change.configInputChange', '.config-input', function() {
-        const key = $(this).data('key');
-        const originalValue = originalConfig[key];
-        const rawInput = $(this).val();
-        
-        const equal = valuesEqualByKey(key, originalValue, rawInput);
-        
-        if (!equal) {
-            modifiedKeys.add(key);
-            $(this).addClass('modified');
-            $(this).closest('.config-item').find('label').addClass('modified');
-        } else {
-            modifiedKeys.delete(key);
-            $(this).removeClass('modified');
-            $(this).closest('.config-item').find('label').removeClass('modified');
-        }
-        
-        updateConfigStatus();
-    });
+        .on('input.configInputChange change.configInputChange', '.config-input', function () {
+            const key = $(this).data('key');
+            const originalValue = originalConfig[key];
+            const rawInput = $(this).val();
 
-    $(document).off('click.togglePassword').on('click.togglePassword', '.toggle-password', function(e) {
+            const equal = valuesEqualByKey(key, originalValue, rawInput);
+
+            if (!equal) {
+                modifiedKeys.add(key);
+                $(this).addClass('modified');
+                $(this).closest('.config-item').find('label').addClass('modified');
+            } else {
+                modifiedKeys.delete(key);
+                $(this).removeClass('modified');
+                $(this).closest('.config-item').find('label').removeClass('modified');
+            }
+
+            updateConfigStatus();
+        });
+
+    $(document).off('click.togglePassword').on('click.togglePassword', '.toggle-password', function (e) {
         e.preventDefault();
         const $btn = $(this);
         const $wrapper = $btn.closest('.password-wrapper');
@@ -225,7 +225,7 @@ function renderConfigSections() {
 
     // 先渲染顶部特殊行
     renderSpecialTopRow();
-    
+
     // 按配置组分组（跳过顶级 env/jtwTcp/normalTcp）
     const groups = {};
     Object.keys(currentConfig).forEach(key => {
@@ -234,13 +234,13 @@ function renderConfigSections() {
         }
         const parts = key.split('.');
         const groupName = parts.length > 2 ? parts.slice(0, -1).join('.') : parts[0];
-        
+
         if (!groups[groupName]) {
             groups[groupName] = {};
         }
         groups[groupName][key] = currentConfig[key];
     });
-    
+
     const envName = getCurrentEnvironment();
     // 渲染每个配置组
     Object.keys(groups).forEach(groupName => {
@@ -249,7 +249,7 @@ function renderConfigSections() {
         const isSubProject = groupName.startsWith(envName + '.converter.') && groupName.split('.').length === 3;
         const headerHtml = `<h3>${groupName} ${isSubProject ? `<button class="btn btn-danger btn-sm" onclick="deleteConfigGroup('${groupName}')" style="margin-left: 10px;">删除转换连接</button>` : ''}</h3>`;
         $section.append(headerHtml);
-        
+
         if (isSubProject) {
             // 转换连接配置：enabled 和 name 优先，其他按字母顺序
             const sortedKeys = sortSubProjectKeys(Object.keys(groups[groupName]));
@@ -266,17 +266,17 @@ function renderConfigSections() {
                 $section.append($item);
             });
         }
-        
+
         $container.append($section);
     });
 }
 
 // 对转换连接配置键进行排序
 function sortSubProjectKeys(keys) {
-    const priorityFields = ['enable', 'name'];
+    const priorityFields = ['enable', 'name', 'M1', 'IA1', 'IC1'];
     const priorityKeys = [];
     const otherKeys = [];
-    
+
     keys.forEach(key => {
         const fieldName = key.split('.').pop();
         if (priorityFields.includes(fieldName)) {
@@ -285,65 +285,65 @@ function sortSubProjectKeys(keys) {
             otherKeys.push(key);
         }
     });
-    
+
     // enabled 和 name 按优先级排序
     priorityKeys.sort((a, b) => {
         const fieldA = a.split('.').pop();
         const fieldB = b.split('.').pop();
         return priorityFields.indexOf(fieldA) - priorityFields.indexOf(fieldB);
     });
-    
+
     // 其他字段按字母顺序排序
     otherKeys.sort((a, b) => {
         const fieldA = a.split('.').pop();
         const fieldB = b.split('.').pop();
         return fieldA.localeCompare(fieldB);
     });
-    
+
     return [...priorityKeys, ...otherKeys];
 }
 
 // 创建配置项（普通项，移除子项级删除按钮）
 // 中文展示名称映射
 const DISPLAY_LABELS = {
-  name: '上级名称',
-  enable: '是否开启本连接',
-  enabled: '是否开启本连接',
-  cryptoPacket: '需加密的推送报文',
-  encryptKey: '加密密钥',
-  extendVersion: '是否使用DBJ扩展后的809协议',
-  govServerIP: '上级平台ip',
-  govServerPort: '上级平台端口',
-  jtw809ConverterDownLinkIp: '暴露给交委下行链接的ip',
-  jtw809ConverterDownLinkPort: '暴露给交委下行连接的端口',
-  jtw809ConverterIp: '交委上级平台ip',
-  jtw809ConverterPort: '交委上级平台端口',
-  localServerIP: '暴露给上级平台下行链接的ip',
-  localServerPort: '暴露给上级平台下行连接的端口',
-  openCrypto: '开启加密',
-  platformId: '上级平台连接id',
-  platformPassword: '上级平台连接密码',
-  platformUserId: '上级平台分配的用户ID',
-  protocolVersion: '协议版本',
-  thirdpartPort: '暴露给第三方推送连接的端口',
-  useLocationInterval: '1分钟内最多推送一个位置点',
-  database: '数据库名',
-  host: '数据库地址',
-  password: '数据库密码',
-  pool_idle_conns: '数据库空闲连接数',
-  pool_size: '数据库连接池',
-  port: '数据库端口',
-  showSQL: '是否打印sql日志',
-  user: '数据库连接用户名',
-  consolePort: '本程序的控制端口',
-  normalTcp: '普通TCP推送',
-  jtwTcp: '交委TCP推送',
+    name: '上级名称',
+    enable: '是否开启本连接',
+    enabled: '是否开启本连接',
+    cryptoPacket: '需加密的推送报文',
+    encryptKey: '加密密钥',
+    extendVersion: '是否使用DBJ扩展后的809协议',
+    govServerIP: '上级平台ip',
+    govServerPort: '上级平台端口',
+    jtw809ConverterDownLinkIp: '暴露给交委下行链接的ip',
+    jtw809ConverterDownLinkPort: '暴露给交委下行连接的端口',
+    jtw809ConverterIp: '交委上级平台ip',
+    jtw809ConverterPort: '交委上级平台端口',
+    localServerIP: '暴露给上级平台下行链接的ip',
+    localServerPort: '暴露给上级平台下行连接的端口',
+    openCrypto: '开启加密',
+    platformId: '上级平台连接id',
+    platformPassword: '上级平台连接密码',
+    platformUserId: '上级平台分配的用户ID',
+    protocolVersion: '协议版本',
+    thirdpartPort: '暴露给第三方推送连接的端口',
+    useLocationInterval: '1分钟内最多推送一个位置点',
+    database: '数据库名',
+    host: '数据库地址',
+    password: '数据库密码',
+    pool_idle_conns: '数据库空闲连接数',
+    pool_size: '数据库连接池',
+    port: '数据库端口',
+    showSQL: '是否打印sql日志',
+    user: '数据库连接用户名',
+    consolePort: '本程序的控制端口',
+    normalTcp: '普通TCP推送',
+    jtwTcp: '交委TCP推送',
 };
 function createConfigItem(key, value) {
     const $item = $('<div class="config-item">');
     const displayKey = key.split('.').pop();
     const valueType = typeof value;
-    
+
     let inputElement;
     const isCryptoPacket = displayKey === 'cryptoPacket' || (typeof key === 'string' && key.endsWith('.cryptoPacket'));
     const isSensitive = /password/i.test(displayKey);
@@ -356,7 +356,7 @@ function createConfigItem(key, value) {
         } else if (value != null) {
             textValue = String(value);
         }
-        inputElement = `<input type="text" class="config-input" data-key="${key}" value="${textValue}">`;
+        inputElement = `<input type="text" class="config-input" data-key="${key}" value="${textValue}" placeholder="S13,S10">`;
     } else if (valueType === 'boolean') {
         inputElement = `<select class="config-input" data-key="${key}">
             <option value="true" ${value ? 'selected' : ''}>true</option>
@@ -376,23 +376,23 @@ function createConfigItem(key, value) {
             inputElement = `<input type="text" class="config-input" data-key="${key}" value="${value}">`;
         }
     }
-    
+
     $item.html(`
         <label>${DISPLAY_LABELS[displayKey] || displayKey}:</label>
         ${inputElement}
     `);
-    
+
     return $item;
 }
 
 // 保存配置（支持环境切换时同步迁移顶级节点）
 function saveConfig() {
     const updatedConfig = {};
-    
-    $('.config-input').each(function() {
+
+    $('.config-input').each(function () {
         const key = $(this).data('key');
         let value = $(this).val();
-        
+
         let converted = value;
         // 特殊处理：cryptoPacket 以逗号分隔保存为数组
         if (typeof key === 'string' && (key.endsWith('.cryptoPacket') || key === 'cryptoPacket')) {
@@ -412,10 +412,10 @@ function saveConfig() {
                 converted = value === 'true';
             }
         }
-        
+
         updatedConfig[key] = converted;
     });
-    
+
     // 环境切换：如果 env 发生变化，则将所有以旧环境为前缀的键迁移到新环境前缀
     const oldEnv = originalConfig['env'];
     const newEnv = updatedConfig['env'];
@@ -433,10 +433,10 @@ function saveConfig() {
         });
         finalFlat = remapped;
     }
-    
+
     // 将扁平结构转换为嵌套，后端更好地写入 TOML
     const nestedConfig = unflattenToNested(finalFlat);
-    
+
     $.ajax({
         url: `${API_BASE}/setting/save`,
         method: 'POST',
@@ -445,7 +445,7 @@ function saveConfig() {
             config: nestedConfig,
             operation: 'update'
         }),
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 originalConfig = JSON.parse(JSON.stringify(finalFlat));
                 modifiedKeys.clear();
@@ -456,7 +456,7 @@ function saveConfig() {
                 showConfigStatus('保存配置失败: ' + data.message, 'danger');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             showConfigStatus('网络错误，保存失败', 'danger');
             console.error('Save config error:', error);
         }
@@ -470,7 +470,7 @@ function reloadConfig() {
             return;
         }
     }
-    
+
     modifiedKeys.clear();
     loadCurrentConfig();
 }
@@ -480,11 +480,11 @@ function resetConfig() {
     if (!confirm('确定要重置为默认配置吗？此操作不可撤销！')) {
         return;
     }
-    
+
     $.ajax({
         url: `${API_BASE}/setting/reset`,
         method: 'POST',
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 loadCurrentConfig();
                 showConfigStatus('配置已重置为默认值', 'warning');
@@ -492,7 +492,7 @@ function resetConfig() {
                 showConfigStatus('重置失败: ' + data.message, 'danger');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             showConfigStatus('网络错误，重置失败', 'danger');
             console.error('Reset config error:', error);
         }
@@ -513,10 +513,10 @@ function deleteConfigGroup(groupName) {
             key: groupName,
             operation: 'delete'
         }),
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 // 本地移除该组下的所有键
-                Object.keys(currentConfig).forEach(function(k) {
+                Object.keys(currentConfig).forEach(function (k) {
                     if (k.startsWith(groupName + '.')) {
                         delete currentConfig[k];
                         delete originalConfig[k];
@@ -529,7 +529,7 @@ function deleteConfigGroup(groupName) {
                 showConfigStatus('删除转换连接失败: ' + data.message, 'danger');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             showConfigStatus('网络错误，删除失败', 'danger');
             console.error('Delete group error:', error);
         }
@@ -541,7 +541,7 @@ function deleteConfigItem(key) {
     if (!confirm(`确定要删除配置项 "${key}" 吗？`)) {
         return;
     }
-    
+
     $.ajax({
         url: `${API_BASE}/setting/delete`,
         method: 'DELETE',
@@ -550,7 +550,7 @@ function deleteConfigItem(key) {
             key: key,
             operation: 'delete'
         }),
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 delete currentConfig[key];
                 delete originalConfig[key];
@@ -561,7 +561,7 @@ function deleteConfigItem(key) {
                 showConfigStatus('删除配置项失败: ' + data.message, 'danger');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             showConfigStatus('网络错误，删除失败', 'danger');
             console.error('Delete config error:', error);
         }
@@ -571,18 +571,18 @@ function deleteConfigItem(key) {
 // 添加新配置（动态环境）
 function addNewConfig() {
     const projectName = $('#new-project-name').val().trim();
-    
+
     if (!projectName) {
         alert('请输入转换连接名称');
         return;
     }
-    
+
     // 验证项目名称格式（只允许字母、数字、下划线）
     if (!/^[a-zA-Z0-9_]+$/.test(projectName)) {
         alert('转换连接名称只能包含字母、数字和下划线');
         return;
     }
-    
+
     const envName = getCurrentEnvironment();
     // 检查是否已存在
     const baseKey = `${envName}.converter.${projectName}`;
@@ -591,7 +591,7 @@ function addNewConfig() {
         alert(`转换连接 "${projectName}" 已存在`);
         return;
     }
-    
+
     // 创建转换连接完整 NodeFor809 配置（嵌套结构）
     const subProjectConfigNested = {
         [envName]: {
@@ -616,12 +616,15 @@ function addNewConfig() {
                     platformUserId: 100101,
                     protocolVersion: "1.0.0",
                     thirdpartPort: 11223,
-                    useLocationInterval: false
+                    useLocationInterval: false,
+                    IC1: "30000000",
+                    IA1: "20000000",
+                    M1: "10000000"
                 }
             }
         }
     };
-    
+
     $.ajax({
         url: `${API_BASE}/setting/save`,
         method: 'POST',
@@ -630,13 +633,13 @@ function addNewConfig() {
             config: subProjectConfigNested,
             operation: 'add_subproject'
         }),
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 // 更新本地配置（扁平化）
                 const flatAdded = flattenObject(subProjectConfigNested);
                 Object.assign(currentConfig, flatAdded);
                 Object.assign(originalConfig, flatAdded);
-                
+
                 renderConfigSections();
                 clearAddForm();
                 showConfigStatus(`转换连接 "${projectName}" 已添加`, 'success');
@@ -646,7 +649,7 @@ function addNewConfig() {
                 alert('添加转换连接失败: ' + data.message);
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             alert('网络错误，添加失败');
             console.error('Add subproject error:', error);
         }
@@ -662,13 +665,13 @@ function clearAddForm() {
 function loadConfigTree() {
     const $tree = $('#config-tree');
     $tree.empty();
-    
+
     // 构建配置树结构
     const tree = {};
     Object.keys(currentConfig).forEach(key => {
         const parts = key.split('.');
         let current = tree;
-        
+
         parts.forEach((part, index) => {
             if (!current[part]) {
                 current[part] = index === parts.length - 1 ? currentConfig[key] : {};
@@ -676,28 +679,28 @@ function loadConfigTree() {
             current = current[part];
         });
     });
-    
+
     // 渲染树结构
     function renderTree(obj, level = 0) {
         const $ul = $('<ul>');
-        
+
         Object.keys(obj).forEach(key => {
             const $li = $('<li>');
             const indent = '&nbsp;'.repeat(level * 4);
-            
+
             if (typeof obj[key] === 'object' && obj[key] !== null) {
                 $li.html(`${indent}<strong>${key}/</strong>`);
                 $li.append(renderTree(obj[key], level + 1));
             } else {
                 $li.html(`${indent}${key}: <code>${obj[key]}</code>`);
             }
-            
+
             $ul.append($li);
         });
-        
+
         return $ul;
     }
-    
+
     $tree.append(renderTree(tree));
 }
 
@@ -706,14 +709,14 @@ function loadHistory() {
     $.ajax({
         url: `${API_BASE}/setting/history`,
         method: 'GET',
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 renderHistory(data.history);
             } else {
                 $('#history-list').html('<p>加载历史记录失败</p>');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             $('#history-list').html('<p>网络错误，无法加载历史记录</p>');
             console.error('Load history error:', error);
         }
@@ -724,12 +727,12 @@ function loadHistory() {
 function renderHistory(history) {
     const $list = $('#history-list');
     $list.empty();
-    
+
     if (!history || history.length === 0) {
         $list.html('<p style="text-align: center; padding: 20px; color: #666;">暂无历史记录</p>');
         return;
     }
-    
+
     history.forEach(item => {
         const op = item.operation || {};
         const opType = typeof op.operation === 'string' ? op.operation : (typeof item.operation === 'string' ? item.operation : 'unknown');
@@ -757,7 +760,7 @@ function renderHistory(history) {
     });
 
     // 展开/收起绑定（使用事件委托避免重复绑定）
-    $list.off('click', '.toggle-details').on('click', '.toggle-details', function() {
+    $list.off('click', '.toggle-details').on('click', '.toggle-details', function () {
         const $item = $(this).closest('.history-item');
         const expanded = $item.attr('data-expanded') === 'true';
         $item.attr('data-expanded', expanded ? 'false' : 'true');
@@ -777,7 +780,7 @@ function rollbackConfig(timestamp) {
     if (!confirm(`确定要回滚到 ${timestamp} 的配置吗？`)) {
         return;
     }
-    
+
     $.ajax({
         url: `${API_BASE}/setting/rollback`,
         method: 'POST',
@@ -786,7 +789,7 @@ function rollbackConfig(timestamp) {
             timestamp: timestamp,
             operation: 'rollback'
         }),
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 loadCurrentConfig();
                 showConfigStatus(`已回滚到 ${timestamp} 的配置`, 'warning');
@@ -794,7 +797,7 @@ function rollbackConfig(timestamp) {
                 showConfigStatus('回滚失败: ' + data.message, 'danger');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             showConfigStatus('网络错误，回滚失败', 'danger');
             console.error('Rollback config error:', error);
         }
@@ -806,11 +809,11 @@ function clearHistory() {
     if (!confirm('确定要清空历史记录吗？此操作不可撤销！')) {
         return;
     }
-    
+
     $.ajax({
         url: `${API_BASE}/setting/clear_history`,
         method: 'POST',
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 $('#history-list').empty();
                 showConfigStatus('已清空历史记录', 'warning');
@@ -818,7 +821,7 @@ function clearHistory() {
                 showConfigStatus('清空失败: ' + data.message, 'danger');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             showConfigStatus('网络错误，清空失败', 'danger');
             console.error('Clear history error:', error);
         }
@@ -830,19 +833,19 @@ function showConfigStatus(message, type) {
     const $status = $('#config-status');
     $status.removeClass('alert-success alert-danger alert-warning');
     $status.addClass(`alert-${type}`);
-    
+
     let indicator = 'status-running';
     if (type === 'danger') {
         indicator = 'status-error';
     } else if (type === 'warning') {
         indicator = 'status-modified';
     }
-    
+
     $status.find('.status-indicator').removeClass('status-running status-error status-modified').addClass(indicator);
     $status.find('span').nextAll().remove();
     $status.append(message);
     $status.show();
-    
+
     // 3秒后自动隐藏错误和警告消息
     if (type !== 'success') {
         setTimeout(() => {
@@ -871,7 +874,7 @@ function loadCurrentConfig() {
     $.ajax({
         url: `${API_BASE}/setting/current`,
         method: 'GET',
-        success: function(data) {
+        success: function (data) {
             if (data.success) {
                 const cfg = data.config || {};
                 // 兼容嵌套结构：统一扁平化为 dot-keys 以复用现有渲染
@@ -884,7 +887,7 @@ function loadCurrentConfig() {
                 showConfigStatus('加载配置失败: ' + data.message, 'danger');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             showConfigStatus('网络错误，无法加载配置', 'danger');
             console.error('Load config error:', error);
         }
